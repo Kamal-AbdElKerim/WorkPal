@@ -1,23 +1,29 @@
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Scanner;
+import java.sql.SQLException;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import DB_Conn.DB;
-import interfaces.User;
+import interfaces.Allclass.Service;
+import interfaces.Allclass.Space;
+import interfaces.Allclass.User;
+import Validation.Validation;
 
 public class ConsoleInterface {
     private Scanner scanner;
     private UserDAOImpl userDAOImpl;
-    private User user;
+    private SpaceDAO spaceDAO;
+    private ServiceDAO serviceDAO; // Added ServiceDAO
     private DB db;
     private int IDAuth;
+    private  Validation validation ;
 
     public ConsoleInterface() {
         this.scanner = new Scanner(System.in);
         this.db = new DB();
         this.userDAOImpl = new UserDAOImpl(db);
+        this.spaceDAO = new SpaceDAO(db);
+        this.serviceDAO = new ServiceDAO(db);
+        this.validation = new Validation();
 
     }
 
@@ -46,11 +52,10 @@ public class ConsoleInterface {
         }
     }
 
-   
-
     private void UserLogin() {
 
-        String email = getValidEmail();
+
+        String email = Validation.getValidEmail();
         System.out.print("Enter your password: ");
         String password = scanner.nextLine();
         int userId = userDAOImpl.login(email, password);
@@ -74,11 +79,14 @@ public class ConsoleInterface {
     }
 
     private void memberRegistration(String Role) {
-        String name = getValidName();
-        String email = getValidEmail();
-        String password = getValidPassword();
-        String address = getValidAddress();
-        String phoneNumber = getValidPhoneNumber();
+
+        String name = Validation.getValidInput("name");
+
+
+        String email = Validation.getValidEmail();
+        String password = Validation.getValidPassword();
+        String address = Validation.getValidAddress();
+        String phoneNumber = Validation.getValidPhoneNumber();
         String role = Role;
 
         Optional<User> existingUser = userDAOImpl.getUserByEmail(email);
@@ -90,74 +98,6 @@ public class ConsoleInterface {
             System.out.println("Registration successful!");
             // memberMenu();
         }
-    }
-
-    private String getValidName() {
-        while (true) {
-            System.out.print("Enter your name: ");
-            String name = scanner.nextLine().trim();
-            if (!name.isEmpty()) {
-                return name;
-            }
-            System.out.println("Name cannot be empty. Please try again.");
-        }
-    }
-
-    private String getValidEmail() {
-        while (true) {
-            System.out.print("Enter your email: ");
-            String email = scanner.nextLine().trim();
-            if (isValidEmail(email)) {
-                return email;
-            }
-            System.out.println("Invalid email format. Please try again.");
-        }
-    }
-
-    private String getValidPassword() {
-        while (true) {
-            System.out.print("Enter your password: ");
-            String password = scanner.nextLine().trim();
-            if (password.length() >= 6) {
-                return password;
-            }
-            System.out.println("Password must be at least 6 characters long. Please try again.");
-        }
-    }
-
-    private boolean isValidEmail(String email) {
-        String emailRegex = "^[a-zA-Z0-9_+.-]+@[a-zA-Z0-9.-]+$";
-        Pattern pattern = Pattern.compile(emailRegex);
-        return pattern.matcher(email).matches();
-    }
-
-    private String getValidAddress() {
-        while (true) {
-            System.out.print("Enter your address: ");
-            String address = scanner.nextLine().trim();
-            if (!address.isEmpty()) {
-                return address;
-            }
-            System.out.println("Address cannot be empty. Please try again.");
-        }
-    }
-
-    private String getValidPhoneNumber() {
-        while (true) {
-            System.out.print("Enter your phone number: ");
-            String phoneNumber = scanner.nextLine().trim();
-            if (isValidPhoneNumber(phoneNumber)) {
-                return phoneNumber;
-            }
-            System.out.println("Invalid phone number format. Please try again.");
-        }
-    }
-
-    private boolean isValidPhoneNumber(String phoneNumber) {
-        // Example regex for phone number validation (basic)
-        String phoneRegex = "^\\+?[0-9]{10,15}$";
-        Pattern pattern = Pattern.compile(phoneRegex);
-        return pattern.matcher(phoneNumber).matches();
     }
 
     private void memberMenu() {
@@ -284,14 +224,14 @@ public class ConsoleInterface {
         // Retrieve user data using the DAO
         HashMap<String, Object> userData = userDAOImpl.getUserById(IDAuth);
         if (!userData.get("email").equals("admin@gmail.com")) {
-        if (!userData.isEmpty()) {
-            System.out.println("Name: " + userData.get("name"));
-            System.out.println("Email: " + userData.get("email"));
-            System.out.println("Phone Number: " + userData.get("phone_number"));
-            System.out.println("Address: " + userData.get("address"));
-        } else {
-            System.out.println("User not found.");
-        }
+            if (!userData.isEmpty()) {
+                System.out.println("Name: " + userData.get("name"));
+                System.out.println("Email: " + userData.get("email"));
+                System.out.println("Phone Number: " + userData.get("phone_number"));
+                System.out.println("Address: " + userData.get("address"));
+            } else {
+                System.out.println("User not found.");
+            }
         }
     }
 
@@ -364,8 +304,222 @@ public class ConsoleInterface {
     }
 
     private void manageSpaces() {
-        // Implementation for managing spaces (add, update, delete)
+        boolean running = true;
+        while (running) {
+            System.out.println("\nManager Spaces");
+            System.out.println("1. Add Space");
+            System.out.println("2. ubdate Space");
+            System.out.println("3. delete Space");
+            System.out.println("4. List Space");
+            System.out.println("5. Add services to Space");
+            System.out.println("6. Log Out");
+            System.out.print("Please choose an option: ");
+
+            int choice = Integer.parseInt(scanner.nextLine());
+            switch (choice) {
+                case 1:
+                    AddSpace();
+                    break;
+                case 2:
+                    updateSpace();
+                    break;
+                case 3:
+                    deleteSpace();
+                    break;
+                case 4:
+
+                    try {
+                        spaceDAO.displayAllSpacesWithServices(IDAuth);
+                    } catch (SQLException e) {
+                        System.out.println("Error displaying spaces with services: " + e.getMessage());
+                    }
+                    break;
+                case 5:
+                    AddServicesToSpace();
+                    break;
+                case 6:
+                    running = false;
+                    break;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
     }
+
+    private void AddSpace() {
+
+        String name = Validation.getValidInput("space name");
+        String description = Validation.getValidInput("space description");
+
+
+        int capacity = Validation.getValidCapacity();
+        boolean availability = Validation.getValidAvailability();
+        float pricePerHour = Validation.getValidPricePerHour();
+
+        // Create Space object
+        Space space = new Space();
+        space.setName(name);
+        space.setDescription(description);
+        space.setCapacity(capacity);
+        space.setAvailability(availability);
+        space.setPricePerHour(pricePerHour);
+        space.setUserId(IDAuth);
+
+        // Add space to database
+        spaceDAO.addSpace(space);
+        System.out.println("Space added successfully!");
+    }
+
+    private void updateSpace() {
+        listSpaces();
+        System.out.print("Enter the ID of the space you want to update: ");
+        int spaceId = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+
+        // Retrieve the space to update
+        Space space = spaceDAO.findSpaceById(spaceId);
+        if (space == null) {
+            System.out.println("Space not found.");
+            return;
+        }
+
+        // Get new details from the user
+        System.out.print("Enter new name (leave blank to keep current): ");
+        String name = scanner.nextLine();
+        if (!name.isEmpty()) {
+            space.setName(name);
+        }
+
+        System.out.print("Enter new description (leave blank to keep current): ");
+        String description = scanner.nextLine();
+        if (!description.isEmpty()) {
+            space.setDescription(description);
+        }
+
+        System.out.print("Enter new capacity (enter 0 to keep current): ");
+        String capacityInput = scanner.nextLine();
+        if (!capacityInput.isEmpty()) {
+            try {
+                int capacity = Integer.parseInt(capacityInput);
+                if (capacity > 0) {
+                    space.setCapacity(capacity);
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input for capacity. Keeping current value.");
+            }
+        }
+
+        System.out.print("Is the space available (true/false): ");
+        String availabilityInput = scanner.nextLine();
+        try {
+            boolean availability = Boolean.parseBoolean(availabilityInput);
+            space.setAvailability(availability);
+        } catch (Exception e) {
+            System.out.println("Invalid input for availability. Keeping current value.");
+        }
+
+        System.out.print("Enter new price per hour: ");
+        String priceInput = scanner.nextLine();
+        if (!priceInput.isEmpty()) {
+            try {
+                float pricePerHour = Float.parseFloat(priceInput);
+                space.setPricePerHour(pricePerHour);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input for price per hour. Keeping current value.");
+            }
+        }
+
+        // Update space in the database
+        spaceDAO.updateSpace(space);
+        System.out.println("Space updated successfully.");
+    }
+
+    private void listSpaces() {
+        // Retrieve all spaces from the database
+        List<Space> spaces = spaceDAO.findAllSpacesByGestionnaire(IDAuth);
+
+        // Check if the list is empty
+        if (spaces.isEmpty()) {
+            System.out.println("No spaces found for the given gestionnaire.");
+            return;
+        }
+
+        // Print headers for readability
+        System.out.printf("%-5s %-20s %-20s %-10s %-10s %-15s%n",
+                "ID", "Name", "Description", "Capacity", "Available", "Price/Hour");
+
+        // Print each space's details
+        for (Space space : spaces) {
+            System.out.printf("%-5d %-20s %-20s %-10d %-10b %-15.2f%n",
+                    space.getSpaceId(),
+                    space.getName(),
+                    space.getDescription(),
+                    space.getCapacity(),
+                    space.isAvailability(),
+                    space.getPricePerHour()); // Ensure conversion to float
+        }
+    }
+
+    private void deleteSpace() {
+        listSpaces();
+        System.out.print("Enter the ID of the space you want to delete: ");
+        int spaceId = scanner.nextInt();
+        scanner.nextLine(); // Consume the newline
+
+        // Confirm deletion
+        System.out.print("Are you sure you want to delete this space? (yes/no): ");
+        String confirmation = scanner.nextLine().trim().toLowerCase();
+        if (!confirmation.equals("yes")) {
+            System.out.println("Deletion canceled.");
+            return;
+        }
+
+        // Delete the space
+        spaceDAO.deleteSpace(spaceId);
+        System.out.println("Space deleted successfully.");
+    }
+
+    private void listAllServices() {
+        Map<Integer, Service> services = serviceDAO.findAllServices();
+        System.out.printf("%-10s %-20s %-30s %-10s%n", "ID", "Name", "Description", "Price");
+        for (Service service : services.values()) {
+            System.out.printf("%-10d %-20s %-30s %-10.2f%n",
+                    service.getServiceId(),
+                    service.getName(),
+                    service.getDescription(),
+                    service.getPrice());
+        }
+    }
+
+    private void AddServicesToSpace() {
+        listSpaces();
+        System.out.print("Enter the ID of the space to which you want to add a service: ");
+        int spaceId = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+
+        boolean addingServices = true;
+
+        while (addingServices) {
+            listAllServices();
+            System.out.print("Enter the ID of the service you want to add (or type 0 to finish): ");
+            int serviceId = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
+
+            if (serviceId == 0) {
+                addingServices = false;
+                System.out.println("Service added to space successfully.");
+            } else {
+                try {
+                    // Add service to space
+                    serviceDAO.addServiceToSpace(spaceId, serviceId);
+                    System.out.println("Service added to space successfully.");
+                } catch (SQLException e) {
+                    System.out.println("Error adding service to space: " + e.getMessage());
+                }
+            }
+        }
+    }
+
 
     private void manageMembers() {
         // Implementation for managing members (add, update, delete)
@@ -422,7 +576,7 @@ public class ConsoleInterface {
     }
 
     private void allUsersByRole(String role) {
-        HashMap<Integer, User> users = userDAOImpl.getAllUsersByRole(IDAuth , role);
+        HashMap<Integer, User> users = userDAOImpl.getAllUsersByRole(IDAuth, role);
 
         if (users.isEmpty()) {
             System.out.println("No users found.");
@@ -478,9 +632,9 @@ public class ConsoleInterface {
         }
     }
 
-    private void updateuser(String Role){
+    private void updateuser(String Role) {
         allUsersByRole(Role); // This method should display all users
-        System.out.print("Enter the user ID of the "+ Role +" you want to update: ");
+        System.out.print("Enter the user ID of the " + Role + " you want to update: ");
         int userId = Integer.parseInt(scanner.nextLine());
         updateProfile(userId);
 
@@ -488,7 +642,7 @@ public class ConsoleInterface {
 
     private void deleteuser(String Role) {
         allUsersByRole(Role); // This method should display all users
-        System.out.print("Enter the user ID of the "+ Role +" you want to delete: ");
+        System.out.print("Enter the user ID of the " + Role + " you want to delete: ");
         int userId = Integer.parseInt(scanner.nextLine());
 
         boolean deleteSuccessful = userDAOImpl.deleteUser(userId);
@@ -538,18 +692,18 @@ public class ConsoleInterface {
         allUsersByRole("gestionnaire");
         System.out.println("List membre");
         allUsersByRole("membre");
-    
+
         System.out.print("Enter the user ID of the user you want to reset the password for: ");
         int userId = Integer.parseInt(scanner.nextLine());
-    
+
         // Prompt for the new password
         System.out.print("Enter the new password: ");
-        String newPassword = getValidPassword();
-    
+        String newPassword = Validation.getValidPassword();
+
         // Reset the password using the DAO method
         userDAOImpl.resetPassword(userId, newPassword);
-    
+
         System.out.println("Password has been reset successfully.");
     }
-    
+
 }

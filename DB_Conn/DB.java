@@ -15,6 +15,7 @@ public class DB {
     public Connection connect() throws SQLException {
         Connection connection = DriverManager.getConnection(url, user, password);
         if (connection != null) {
+            
         } else {
             System.out.println("Failed to make connection!");
         }

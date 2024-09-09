@@ -1,13 +1,11 @@
 
 
 import DB_Conn.DB;
-import interfaces.User;
+import interfaces.Allclass.User;
 import interfaces.UserDAO;
 
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Optional;
 
 public class UserDAOImpl implements UserDAO {

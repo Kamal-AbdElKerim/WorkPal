@@ -1,13 +1,14 @@
 package interfaces;
 
+import interfaces.Allclass.User;
+
 import java.util.HashMap;
-import java.util.List;
 import java.util.Optional;
 
 
 public interface UserDAO {
 
-    void addUser(User user); 
+    void addUser(User user);
 
     HashMap<String, Object> getUserById(int id);
 
