@@ -1,3 +1,4 @@
+package interfaces.Allclass;
 public class Reservations {
 
     private int reservation_id;

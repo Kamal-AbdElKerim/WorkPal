@@ -1,5 +1,8 @@
 package Validation;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
@@ -121,5 +124,44 @@ public class Validation {
         String phoneRegex = "^\\+?[0-9]{10,15}$";
         Pattern pattern = Pattern.compile(phoneRegex);
         return pattern.matcher(phoneNumber).matches();
+    }
+
+    public static LocalDate getValidDate(String prompt) {
+        Scanner scanner = new Scanner(System.in);
+        LocalDate date = null;
+        while (date == null) {
+            System.out.println(prompt);
+            String dateInput = scanner.nextLine().trim();
+
+            if (dateInput.isEmpty()) {
+                System.out.println(prompt +" cannot be empty. Please try again.");
+                 dateInput = scanner.nextLine().trim();
+            }
+            try {
+                date = LocalDate.parse(dateInput);
+            } catch (DateTimeParseException e) {
+                System.out.println("Invalid date format. Please enter the date in YYYY-MM-DD format.");
+            }
+        }
+        return date;
+    }
+
+    public static double getValidPrice() {
+        Scanner scanner = new Scanner(System.in);
+        double price = -1;
+        while (price < 0) {
+            System.out.println("Enter price:");
+            try {
+                price = scanner.nextDouble();
+                scanner.nextLine(); // Clear the buffer
+                if (price < 0) {
+                    System.out.println("Price cannot be negative. Please try again.");
+                }
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input. Please enter a valid number for the price.");
+                scanner.nextLine(); // Clear the buffer
+            }
+        }
+        return price;
     }
 }

@@ -1,8 +1,10 @@
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Pattern;
 
 import DB_Conn.DB;
+import interfaces.Allclass.Abonnement;
 import interfaces.Allclass.Service;
 import interfaces.Allclass.Space;
 import interfaces.Allclass.User;
@@ -15,7 +17,8 @@ public class ConsoleInterface {
     private ServiceDAO serviceDAO; // Added ServiceDAO
     private DB db;
     private int IDAuth;
-    private  Validation validation ;
+    private Validation validation;
+    private AbonnementsDAO abonnementsDAO;
 
     public ConsoleInterface() {
         this.scanner = new Scanner(System.in);
@@ -24,6 +27,7 @@ public class ConsoleInterface {
         this.spaceDAO = new SpaceDAO(db);
         this.serviceDAO = new ServiceDAO(db);
         this.validation = new Validation();
+        this.abonnementsDAO = new AbonnementsDAO(db);
 
     }
 
@@ -54,7 +58,6 @@ public class ConsoleInterface {
 
     private void UserLogin() {
 
-
         String email = Validation.getValidEmail();
         System.out.print("Enter your password: ");
         String password = scanner.nextLine();
@@ -81,7 +84,6 @@ public class ConsoleInterface {
     private void memberRegistration(String Role) {
 
         String name = Validation.getValidInput("name");
-
 
         String email = Validation.getValidEmail();
         String password = Validation.getValidPassword();
@@ -284,7 +286,13 @@ public class ConsoleInterface {
     }
 
     private void reserveSpace() {
-        // Implementation for reserving a space
+        try {
+
+            spaceDAO.displayAllSpacesWithServices();
+        } catch (Exception e) {
+            System.out.println("Failed to reserve space.");
+        }
+
     }
 
     private void viewReservations() {
@@ -308,11 +316,11 @@ public class ConsoleInterface {
         while (running) {
             System.out.println("\nManager Spaces");
             System.out.println("1. Add Space");
-            System.out.println("2. ubdate Space");
+            System.out.println("2. update Space");
             System.out.println("3. delete Space");
             System.out.println("4. List Space");
             System.out.println("5. Add services to Space");
-            System.out.println("6. Log Out");
+            System.out.println("6. Back");
             System.out.print("Please choose an option: ");
 
             int choice = Integer.parseInt(scanner.nextLine());
@@ -350,7 +358,6 @@ public class ConsoleInterface {
 
         String name = Validation.getValidInput("space name");
         String description = Validation.getValidInput("space description");
-
 
         int capacity = Validation.getValidCapacity();
         boolean availability = Validation.getValidAvailability();
@@ -520,14 +527,152 @@ public class ConsoleInterface {
         }
     }
 
-
     private void manageMembers() {
         // Implementation for managing members (add, update, delete)
     }
 
     private void manageSubscriptions() {
-        // Implementation for managing subscriptions (create, update, delete)
+        boolean running = true;
+        while (running) {
+            System.out.println("\nmanage Subscriptions");
+            System.out.println("1. Add Subscriptions");
+            System.out.println("2. update Subscriptions");
+            System.out.println("3. delete Subscriptions");
+            System.out.println("4. list Subscriptions");
+            System.out.println("5. back");
+            System.out.print("Please choose an option: ");
+
+            int choice = Integer.parseInt(scanner.nextLine());
+            switch (choice) {
+                case 1:
+                    AddAbonnements();
+                    break;
+                case 2:
+                    UpdateAbonnements();
+                    break;
+                case 3:
+                    DeleteAbonnements();
+                    break;
+                case 4:
+                    ListAbonnements();
+                    break;
+                case 5:
+                    running = false;
+                    break;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
     }
+
+    private void AddAbonnements() {
+
+        String name = Validation.getValidInput("name");
+
+        String description = Validation.getValidInput("description");
+
+        LocalDate startDate = Validation.getValidDate("Enter start date (YYYY-MM-DD):");
+
+        LocalDate endDate = Validation.getValidDate("Enter end date (YYYY-MM-DD) or press Enter to skip:");
+
+        double price = Validation.getValidPrice();
+        System.out.println(IDAuth);
+        Abonnement abonnement = new Abonnement(name, description, startDate, endDate, price, IDAuth);
+
+        try {
+            abonnementsDAO.addAbonnement(abonnement);
+            System.out.println("Abonnement created successfully.");
+        } catch (SQLException e) {
+            System.err.println("Error creating abonnement: " + e.getMessage());
+        }
+
+    }
+
+    private void UpdateAbonnements() {
+        ListAbonnements();
+        System.out.println("Enter abonnement ID to update:");
+        int abonnementId = Integer.parseInt(scanner.nextLine());
+        try {
+        Abonnement existingAbonnement = abonnementsDAO.getAbonnementById(abonnementId)
+                .orElseThrow(() -> new SQLException("Abonnement not found"));
+
+        // Gather updated information
+        System.out.print("Enter new name (or press Enter to keep '" + existingAbonnement.getName() + "'): ");
+        String name = scanner.nextLine().trim();
+        if (name.isEmpty()) name = existingAbonnement.getName();
+
+        System.out.print("Enter new description (or press Enter to keep '" + existingAbonnement.getDescription() + "'): ");
+        String description = scanner.nextLine().trim();
+        if (description.isEmpty()) description = existingAbonnement.getDescription();
+
+        System.out.print("Enter new start date (YYYY-MM-DD) (or press Enter to keep '" + existingAbonnement.getStartDate() + "'): ");
+        String startDateInput = scanner.nextLine().trim();
+        LocalDate startDate = startDateInput.isEmpty() ? existingAbonnement.getStartDate() : LocalDate.parse(startDateInput);
+
+        System.out.print("Enter new end date (YYYY-MM-DD) (or press Enter to keep '" + existingAbonnement.getEndDate() + "'): ");
+        String endDateInput = scanner.nextLine().trim();
+        LocalDate endDate = endDateInput.isEmpty() ? existingAbonnement.getEndDate() : LocalDate.parse(endDateInput);
+
+        double price = -1;
+        while (price < 0) {
+            System.out.print("Enter new price (or press Enter to keep '" + existingAbonnement.getPrice() + "'): ");
+            String priceInput = scanner.nextLine().trim();
+            if (priceInput.isEmpty()) {
+                price = existingAbonnement.getPrice();
+            } else {
+                try {
+                    price = Double.parseDouble(priceInput);
+                    if (price < 0) {
+                        System.out.println("Price cannot be negative. Please enter a valid price.");
+                        price = -1;
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid price. Please enter a valid number.");
+                }
+            }
+        }
+
+        // Create an updated Abonnement object
+        Abonnement updatedAbonnement = new Abonnement(abonnementId, name, description, startDate, endDate, price , IDAuth);
+
+        // Update the abonnement in the database
+        abonnementsDAO.updateAbonnement(updatedAbonnement);
+
+        System.out.println("Abonnement updated successfully.");
+
+    } catch (SQLException e) {
+        System.out.println("Error updating abonnement: " + e.getMessage());
+    }
+
+    }
+
+
+
+    private void ListAbonnements() {
+        try {
+            List<Abonnement> abonnements = abonnementsDAO.getAllAbonnements(IDAuth);
+
+            for (Abonnement abonnement : abonnements) {
+                System.out.println(abonnement);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error listing abonnements: " + e.getMessage());
+        }
+    }
+
+    private void DeleteAbonnements() {
+        ListAbonnements();
+        System.out.println("Enter abonnement ID to delete:");
+        int abonnementId = Integer.parseInt(scanner.nextLine());
+
+        try {
+            abonnementsDAO.deleteAbonnement(abonnementId);
+            System.out.println("Abonnement deleted successfully.");
+        } catch (SQLException e) {
+            System.err.println("Error deleting abonnement: " + e.getMessage());
+        }
+    }
+
 
     private void viewReports() {
         // Implementation for viewing reports and statistics

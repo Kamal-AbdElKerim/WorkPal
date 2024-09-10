@@ -4,7 +4,9 @@ import interfaces.Spaces;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SpaceDAO implements Spaces {
 
@@ -184,6 +186,69 @@ public class SpaceDAO implements Spaces {
             throw new SQLException("Failed to retrieve spaces with services: " + e.getMessage());
         }
     }
+
+
+
+
+
+    public void displayAllSpacesWithServices() throws SQLException {
+        String sql = "SELECT s.space_id, s.name AS space_name, s.description AS space_description, " +
+                "sv.name AS service_name, sv.description AS service_description " +
+                "FROM spaces s " +
+                "LEFT JOIN service_spaces ss ON s.space_id = ss.spaces_id " +
+                "LEFT JOIN services sv ON ss.service_id = sv.service_id " +
+                "ORDER BY s.space_id";
+
+        try (Connection conn = db.connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                // Map to store space details and concatenate services
+                Map<Integer, StringBuilder> spaceServices = new HashMap<>();
+
+                // Print table headers with clear separation lines
+                System.out.printf("%-10s | %-20s | %-30s ",
+                        "Space ID", "Space Name", "Space Description");
+                System.out.println("\n------------------------------------------------------------------------------------------------------------");
+
+                while (rs.next()) {
+                    int spaceId = rs.getInt("space_id");
+                    String spaceName = rs.getString("space_name");
+                    String spaceDescription = rs.getString("space_description");
+                    String serviceName = rs.getString("service_name");
+                    String serviceDescription = rs.getString("service_description");
+
+                    // Initialize services info if not already done for this space
+                    spaceServices.putIfAbsent(spaceId, new StringBuilder(String.format("%-20s | %-30s", spaceName, spaceDescription)));
+
+                    // Add services to the space
+
+                    if (serviceName != null && serviceDescription != null) {
+                        spaceServices.get(spaceId).append(String.format("%n%-10s : %-20s", serviceName, serviceDescription));
+                    } else {
+                        spaceServices.get(spaceId).append(String.format("%n%-10s : %-20s", "N/A", "N/A"));
+                    }
+
+                }
+
+                // Print all spaces with services in a styled table format
+                for (Map.Entry<Integer, StringBuilder> entry : spaceServices.entrySet()) {
+
+                    System.out.printf("%-10d | %-80s%n", entry.getKey(), entry.getValue().toString());
+                    System.out.println("------------------------------------------------------------------------------------------------------------");
+
+                }
+            }
+        } catch (SQLException e) {
+            throw new SQLException("Failed to retrieve spaces with services: " + e.getMessage());
+        }
+    }
+
+
+
+
+
+
 
 
 
