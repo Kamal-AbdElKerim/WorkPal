@@ -17,14 +17,13 @@ public class AbonnementsDAO implements AbonnementsInterface {
 
     @Override
     public void addAbonnement(Abonnement abonnement) throws SQLException {
-        String sql = "INSERT INTO abonnements (name, description, start_date, end_date, price, user_id) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO abonnements (name, description, count_jour, price, user_id) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = db.connect().prepareStatement(sql)) {
             stmt.setString(1, abonnement.getName());
             stmt.setString(2, abonnement.getDescription());
-            stmt.setDate(3, Date.valueOf(abonnement.getStartDate()));
-            stmt.setDate(4, abonnement.getEndDate() != null ? Date.valueOf(abonnement.getEndDate()) : null);
-            stmt.setDouble(5, abonnement.getPrice());
-            stmt.setInt(6, abonnement.getUserId());
+            stmt.setInt(3, abonnement.getCountJour());
+            stmt.setDouble(4, abonnement.getPrice());
+            stmt.setInt(5, abonnement.getUserId());
             stmt.executeUpdate();
         }
     }
@@ -59,15 +58,14 @@ public class AbonnementsDAO implements AbonnementsInterface {
 
     @Override
     public void updateAbonnement(Abonnement abonnement) throws SQLException {
-        String sql = "UPDATE abonnements SET name = ?, description = ?, start_date = ?, end_date = ?, price = ?, user_id = ? WHERE abonnement_id = ?";
+        String sql = "UPDATE abonnements SET name = ?, description = ?,count_jour = ?, price = ?, user_id = ? WHERE abonnement_id = ?";
         try (PreparedStatement stmt = db.connect().prepareStatement(sql)) {
             stmt.setString(1, abonnement.getName());
             stmt.setString(2, abonnement.getDescription());
-            stmt.setDate(3, Date.valueOf(abonnement.getStartDate()));
-            stmt.setDate(4, abonnement.getEndDate() != null ? Date.valueOf(abonnement.getEndDate()) : null);
-            stmt.setDouble(5, abonnement.getPrice());
-            stmt.setInt(6, abonnement.getUserId());
-            stmt.setInt(7, abonnement.getAbonnementId());
+            stmt.setInt(3, abonnement.getCountJour());
+            stmt.setDouble(4, abonnement.getPrice());
+            stmt.setInt(5, abonnement.getUserId());
+            stmt.setInt(6, abonnement.getAbonnementId());
             stmt.executeUpdate();
         }
     }
@@ -87,12 +85,12 @@ public class AbonnementsDAO implements AbonnementsInterface {
         int abonnementId = rs.getInt("abonnement_id");
         String name = rs.getString("name");
         String description = rs.getString("description");
-        Date startDate = rs.getDate("start_date");
-        Date endDate = rs.getDate("end_date");
+        int countJour = rs.getInt("count_jour");
+
         double price = rs.getDouble("price");
         int userId = rs.getInt("user_id");
         Timestamp createdAt = rs.getTimestamp("created_at");
 
-        return new Abonnement(abonnementId, name, description, startDate.toLocalDate(),  endDate.toLocalDate() , price, userId);
+        return new Abonnement(abonnementId, name, description, countJour , price, userId);
     }
 }

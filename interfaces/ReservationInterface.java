@@ -12,7 +12,7 @@ public interface ReservationInterface {
 
     Optional<Reservation> getReservationById(int reservationId) throws SQLException;
 
-    List<Reservation> getAllReservations() throws SQLException;
+    List<Reservation> getAllReservationsByMembre(int AuthID) throws SQLException;
 
     void updateReservation(Reservation reservation) throws SQLException;
 

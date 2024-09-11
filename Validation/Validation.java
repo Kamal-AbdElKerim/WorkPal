@@ -126,24 +126,20 @@ public class Validation {
         return pattern.matcher(phoneNumber).matches();
     }
 
-    public static LocalDate getValidDate(String prompt) {
+    public static int getValidJour() {
         Scanner scanner = new Scanner(System.in);
-        LocalDate date = null;
-        while (date == null) {
-            System.out.println(prompt);
-            String dateInput = scanner.nextLine().trim();
-
-            if (dateInput.isEmpty()) {
-                System.out.println(prompt +" cannot be empty. Please try again.");
-                 dateInput = scanner.nextLine().trim();
+        while (true) {
+            System.out.print("Enter count Jour: ");
+            if (scanner.hasNextInt()) {
+                int capacity = scanner.nextInt();
+                scanner.nextLine(); // Consume the newline
+                if (capacity > 0) {
+                    return capacity;
+                }
             }
-            try {
-                date = LocalDate.parse(dateInput);
-            } catch (DateTimeParseException e) {
-                System.out.println("Invalid date format. Please enter the date in YYYY-MM-DD format.");
-            }
+            System.out.println("count Jour must be a positive integer. Please try again.");
+            scanner.nextLine(); // Clear invalid input
         }
-        return date;
     }
 
     public static double getValidPrice() {

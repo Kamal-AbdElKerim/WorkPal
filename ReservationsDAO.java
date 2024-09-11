@@ -57,10 +57,13 @@ public class ReservationsDAO implements ReservationInterface {
     }
 
     @Override
-    public List<Reservation> getAllReservations() throws SQLException {
-        String sql = "SELECT * FROM reservations";
-        try (Statement stmt = db.connect().createStatement()) {
-            ResultSet rs = stmt.executeQuery(sql);
+    public List<Reservation> getAllReservationsByMembre(int AuthID) throws SQLException {
+        String sql = "SELECT * FROM reservations WHERE user_id = ?";
+        
+        try (PreparedStatement stmt = db.connect().prepareStatement(sql)) {
+            stmt.setInt(1, AuthID);  // Set the AuthID parameter in the SQL query
+            ResultSet rs = stmt.executeQuery();
+            
             List<Reservation> reservations = new ArrayList<>();
             while (rs.next()) {
                 reservations.add(mapRowToReservation(rs));
@@ -68,6 +71,7 @@ public class ReservationsDAO implements ReservationInterface {
             return reservations;
         }
     }
+    
 
     @Override
     public void updateReservation(Reservation reservation) throws SQLException {

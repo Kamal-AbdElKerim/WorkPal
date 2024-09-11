@@ -6,27 +6,24 @@ public class Abonnement {
     private int abonnementId;
     private String name;
     private String description;
-    private LocalDate startDate;
-    private LocalDate endDate;
+    private int countJour ;
     private double price;
     private int userId;
 
     // Constructors
-    public Abonnement(int abonnementId, String name, String description, LocalDate startDate, LocalDate endDate, double price, int userId) {
+    public Abonnement(int abonnementId, String name, String description, int countJour , double price, int userId) {
         this.abonnementId = abonnementId;
         this.name = name;
         this.description = description;
-        this.startDate = startDate;
-        this.endDate = endDate;
+        this.countJour = countJour;
         this.price = price;
         this.userId = userId;
     }
 
-    public Abonnement(String name, String description, LocalDate startDate, LocalDate endDate, double price, int userId) {
+    public Abonnement(String name, String description, int countJour , double price, int userId) {
         this.name = name;
         this.description = description;
-        this.startDate = startDate;
-        this.endDate = endDate;
+        this.countJour = countJour;
         this.price = price;
         this.userId = userId;
 
@@ -57,20 +54,12 @@ public class Abonnement {
         this.description = description;
     }
 
-    public LocalDate getStartDate() {
-        return startDate;
+    public int getCountJour() {
+        return countJour;
     }
 
-    public void setStartDate(LocalDate startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDate getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDate endDate) {
-        this.endDate = endDate;
+    public void setCountJour(int countJour) {
+        this.countJour = countJour;
     }
 
     public double getPrice() {
@@ -97,8 +86,7 @@ public class Abonnement {
                 "abonnementId=" + abonnementId +
                 ", name='" + name + '\'' +
                 ", description='" + description + '\'' +
-                ", startDate=" + startDate +
-                ", endDate=" + endDate +
+                ", countJour=" + countJour +
                 ", price=" + price +
                 ", userId=" + userId +
                 '}';
