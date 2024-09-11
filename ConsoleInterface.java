@@ -1,10 +1,14 @@
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
 
 import DB_Conn.DB;
 import interfaces.Allclass.Abonnement;
+import interfaces.Allclass.Payments;
+import interfaces.Allclass.Reservation;
 import interfaces.Allclass.Service;
 import interfaces.Allclass.Space;
 import interfaces.Allclass.User;
@@ -19,6 +23,8 @@ public class ConsoleInterface {
     private int IDAuth;
     private Validation validation;
     private AbonnementsDAO abonnementsDAO;
+    private ReservationsDAO reservationsDAO;
+    private PaymentsDAO paymentsDAO;
 
     public ConsoleInterface() {
         this.scanner = new Scanner(System.in);
@@ -28,6 +34,8 @@ public class ConsoleInterface {
         this.serviceDAO = new ServiceDAO(db);
         this.validation = new Validation();
         this.abonnementsDAO = new AbonnementsDAO(db);
+        this.reservationsDAO = new ReservationsDAO(db);
+        this.paymentsDAO = new PaymentsDAO(db);
 
     }
 
@@ -115,8 +123,22 @@ public class ConsoleInterface {
             System.out.println("7. View Events");
             System.out.println("8. Log Out");
             System.out.print("Please choose an option: ");
-
-            int choice = Integer.parseInt(scanner.nextLine());
+    
+            String input = scanner.nextLine().trim();
+            
+            if (input.isEmpty()) {
+                System.out.println("Input cannot be empty. Please enter a valid number.");
+                continue;
+            }
+    
+            int choice;
+            try {
+                choice = Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid choice. Please enter a valid number.");
+                continue;
+            }
+    
             switch (choice) {
                 case 1:
                     viewProfile();
@@ -141,13 +163,15 @@ public class ConsoleInterface {
                     break;
                 case 8:
                     running = false;
+                    System.out.println("Logging out...");
                     break;
                 default:
                     System.out.println("Invalid choice. Please try again.");
             }
         }
     }
-
+    
+    
     private void managerMenu() {
         boolean running = true;
         while (running) {
@@ -287,11 +311,117 @@ public class ConsoleInterface {
 
     private void reserveSpace() {
         try {
-
+            // Display all available spaces with associated services
             spaceDAO.displayAllSpacesWithServices();
+
+            System.out.println("Enter Space ID to reserve:");
+            int spaceId = Integer.parseInt(scanner.nextLine());
+
+            boolean running = true;
+            while (running) {
+                // Provide options for the user to choose the reservation method
+                System.out.println("\nChoose a method to reserve:");
+                System.out.println("1. Reserve Space");
+                System.out.println("2. Reserve Space with Abonnement");
+
+                int choice = Integer.parseInt(scanner.nextLine());
+
+                switch (choice) {
+                    case 1:
+                        // Reserve space without abonnement
+                        reserveSpaceWithoutAbonnement(spaceId);
+
+                        break;
+
+                    case 2:
+                        reserveSpaceWithAbonnement(spaceId);
+                        break;
+
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                        break;
+                }
+            }
         } catch (Exception e) {
-            System.out.println("Failed to reserve space.");
+            System.out.println("Failed to reserve space: " + e.getMessage());
+            e.printStackTrace(); // Log the exception for debugging
         }
+    }
+
+    public void reserveSpaceWithoutAbonnement(int spaceId) throws Exception {
+        System.out.println("How many days do you want to reserve the space?");
+        int days;
+        String status = "active";
+    
+        // Get the number of days from user input
+        try {
+            String input = scanner.nextLine();
+            if (input.trim().isEmpty()) {
+                System.out.println("Input cannot be empty. Please enter a valid number of days.");
+                return;
+            }
+            days = Integer.parseInt(input);
+            if (days <= 0) {
+                System.out.println("Number of days must be greater than zero.");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input. Please enter a valid number of days.");
+            return;
+        }
+    
+        // Fetch space details
+        Space space = spaceDAO.findSpaceById(spaceId);
+    
+        if (space == null) {
+            System.out.println("Space not found.");
+            memberMenu();
+            return;
+        }
+    
+        LocalDateTime localDateTime = LocalDateTime.now();
+        Timestamp startTime = Timestamp.valueOf(localDateTime);
+    
+        if (space.getAvailability()) {
+            // Create a new reservation
+            double payment = space.getPricePerJour() * days;
+            System.out.println("Total price: " + payment + "DH");
+            System.out.println("Do you want to reserve for " + payment + "DH? (true or false):");
+    
+            // Handle user input for reservation confirmation
+            boolean userResponse;
+            try {
+                userResponse = scanner.nextBoolean();
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input. Please enter 'true' or 'false'.");
+                scanner.next(); // Clear the invalid input
+                return;
+            }
+    
+            if (userResponse) {
+                Reservation reservation = new Reservation(IDAuth, spaceId, startTime, days, status);
+                reservationsDAO.addReservation(reservation);
+                int reservationId = reservation.getReservationId();
+                space.setAvailability(false);
+                spaceDAO.updateSpace(space);
+                Payments pay = new Payments(reservationId, payment, startTime, "Credit Card");
+                paymentsDAO.addPayment(pay);
+    
+                System.out.println("You have reserved the space for " + days + " days.");
+            } else {
+                System.out.println("Reservation cancelled.");
+            }
+    
+            // Return to member menu
+            memberMenu();
+    
+        } else {
+            System.out.println("Space is not available at the moment.");
+        }
+    }
+    
+
+    private void reserveSpaceWithAbonnement(int spaceId) {
 
     }
 
@@ -335,12 +465,8 @@ public class ConsoleInterface {
                     deleteSpace();
                     break;
                 case 4:
+                    listSpaces();
 
-                    try {
-                        spaceDAO.displayAllSpacesWithServices(IDAuth);
-                    } catch (SQLException e) {
-                        System.out.println("Error displaying spaces with services: " + e.getMessage());
-                    }
                     break;
                 case 5:
                     AddServicesToSpace();
@@ -361,7 +487,7 @@ public class ConsoleInterface {
 
         int capacity = Validation.getValidCapacity();
         boolean availability = Validation.getValidAvailability();
-        float pricePerHour = Validation.getValidPricePerHour();
+        float pricePerJour = Validation.getValidPricePerJour();
 
         // Create Space object
         Space space = new Space();
@@ -369,7 +495,7 @@ public class ConsoleInterface {
         space.setDescription(description);
         space.setCapacity(capacity);
         space.setAvailability(availability);
-        space.setPricePerHour(pricePerHour);
+        space.setPricePerJour(pricePerJour);
         space.setUserId(IDAuth);
 
         // Add space to database
@@ -429,8 +555,8 @@ public class ConsoleInterface {
         String priceInput = scanner.nextLine();
         if (!priceInput.isEmpty()) {
             try {
-                float pricePerHour = Float.parseFloat(priceInput);
-                space.setPricePerHour(pricePerHour);
+                float pricePerJour = Float.parseFloat(priceInput);
+                space.setPricePerJour(pricePerJour);
             } catch (NumberFormatException e) {
                 System.out.println("Invalid input for price per hour. Keeping current value.");
             }
@@ -442,29 +568,12 @@ public class ConsoleInterface {
     }
 
     private void listSpaces() {
-        // Retrieve all spaces from the database
-        List<Space> spaces = spaceDAO.findAllSpacesByGestionnaire(IDAuth);
-
-        // Check if the list is empty
-        if (spaces.isEmpty()) {
-            System.out.println("No spaces found for the given gestionnaire.");
-            return;
+        try {
+            spaceDAO.displayAllSpacesWithServices(IDAuth);
+        } catch (SQLException e) {
+            System.out.println("Error displaying spaces with services: " + e.getMessage());
         }
 
-        // Print headers for readability
-        System.out.printf("%-5s %-20s %-20s %-10s %-10s %-15s%n",
-                "ID", "Name", "Description", "Capacity", "Available", "Price/Hour");
-
-        // Print each space's details
-        for (Space space : spaces) {
-            System.out.printf("%-5d %-20s %-20s %-10d %-10b %-15.2f%n",
-                    space.getSpaceId(),
-                    space.getName(),
-                    space.getDescription(),
-                    space.getCapacity(),
-                    space.isAvailability(),
-                    space.getPricePerHour()); // Ensure conversion to float
-        }
     }
 
     private void deleteSpace() {
@@ -593,60 +702,66 @@ public class ConsoleInterface {
         System.out.println("Enter abonnement ID to update:");
         int abonnementId = Integer.parseInt(scanner.nextLine());
         try {
-        Abonnement existingAbonnement = abonnementsDAO.getAbonnementById(abonnementId)
-                .orElseThrow(() -> new SQLException("Abonnement not found"));
+            Abonnement existingAbonnement = abonnementsDAO.getAbonnementById(abonnementId)
+                    .orElseThrow(() -> new SQLException("Abonnement not found"));
 
-        // Gather updated information
-        System.out.print("Enter new name (or press Enter to keep '" + existingAbonnement.getName() + "'): ");
-        String name = scanner.nextLine().trim();
-        if (name.isEmpty()) name = existingAbonnement.getName();
+            // Gather updated information
+            System.out.print("Enter new name (or press Enter to keep '" + existingAbonnement.getName() + "'): ");
+            String name = scanner.nextLine().trim();
+            if (name.isEmpty())
+                name = existingAbonnement.getName();
 
-        System.out.print("Enter new description (or press Enter to keep '" + existingAbonnement.getDescription() + "'): ");
-        String description = scanner.nextLine().trim();
-        if (description.isEmpty()) description = existingAbonnement.getDescription();
+            System.out.print(
+                    "Enter new description (or press Enter to keep '" + existingAbonnement.getDescription() + "'): ");
+            String description = scanner.nextLine().trim();
+            if (description.isEmpty())
+                description = existingAbonnement.getDescription();
 
-        System.out.print("Enter new start date (YYYY-MM-DD) (or press Enter to keep '" + existingAbonnement.getStartDate() + "'): ");
-        String startDateInput = scanner.nextLine().trim();
-        LocalDate startDate = startDateInput.isEmpty() ? existingAbonnement.getStartDate() : LocalDate.parse(startDateInput);
+            System.out.print("Enter new start date (YYYY-MM-DD) (or press Enter to keep '"
+                    + existingAbonnement.getStartDate() + "'): ");
+            String startDateInput = scanner.nextLine().trim();
+            LocalDate startDate = startDateInput.isEmpty() ? existingAbonnement.getStartDate()
+                    : LocalDate.parse(startDateInput);
 
-        System.out.print("Enter new end date (YYYY-MM-DD) (or press Enter to keep '" + existingAbonnement.getEndDate() + "'): ");
-        String endDateInput = scanner.nextLine().trim();
-        LocalDate endDate = endDateInput.isEmpty() ? existingAbonnement.getEndDate() : LocalDate.parse(endDateInput);
+            System.out.print("Enter new end date (YYYY-MM-DD) (or press Enter to keep '"
+                    + existingAbonnement.getEndDate() + "'): ");
+            String endDateInput = scanner.nextLine().trim();
+            LocalDate endDate = endDateInput.isEmpty() ? existingAbonnement.getEndDate()
+                    : LocalDate.parse(endDateInput);
 
-        double price = -1;
-        while (price < 0) {
-            System.out.print("Enter new price (or press Enter to keep '" + existingAbonnement.getPrice() + "'): ");
-            String priceInput = scanner.nextLine().trim();
-            if (priceInput.isEmpty()) {
-                price = existingAbonnement.getPrice();
-            } else {
-                try {
-                    price = Double.parseDouble(priceInput);
-                    if (price < 0) {
-                        System.out.println("Price cannot be negative. Please enter a valid price.");
-                        price = -1;
+            double price = -1;
+            while (price < 0) {
+                System.out.print("Enter new price (or press Enter to keep '" + existingAbonnement.getPrice() + "'): ");
+                String priceInput = scanner.nextLine().trim();
+                if (priceInput.isEmpty()) {
+                    price = existingAbonnement.getPrice();
+                } else {
+                    try {
+                        price = Double.parseDouble(priceInput);
+                        if (price < 0) {
+                            System.out.println("Price cannot be negative. Please enter a valid price.");
+                            price = -1;
+                        }
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid price. Please enter a valid number.");
                     }
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid price. Please enter a valid number.");
                 }
             }
+
+            // Create an updated Abonnement object
+            Abonnement updatedAbonnement = new Abonnement(abonnementId, name, description, startDate, endDate, price,
+                    IDAuth);
+
+            // Update the abonnement in the database
+            abonnementsDAO.updateAbonnement(updatedAbonnement);
+
+            System.out.println("Abonnement updated successfully.");
+
+        } catch (SQLException e) {
+            System.out.println("Error updating abonnement: " + e.getMessage());
         }
 
-        // Create an updated Abonnement object
-        Abonnement updatedAbonnement = new Abonnement(abonnementId, name, description, startDate, endDate, price , IDAuth);
-
-        // Update the abonnement in the database
-        abonnementsDAO.updateAbonnement(updatedAbonnement);
-
-        System.out.println("Abonnement updated successfully.");
-
-    } catch (SQLException e) {
-        System.out.println("Error updating abonnement: " + e.getMessage());
     }
-
-    }
-
-
 
     private void ListAbonnements() {
         try {
@@ -672,7 +787,6 @@ public class ConsoleInterface {
             System.err.println("Error deleting abonnement: " + e.getMessage());
         }
     }
-
 
     private void viewReports() {
         // Implementation for viewing reports and statistics

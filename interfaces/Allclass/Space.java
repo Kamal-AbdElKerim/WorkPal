@@ -6,19 +6,19 @@ public class Space {
     private String description;
     private int capacity;
     private boolean availability;
-    private float pricePerHour;
+    private float pricePerJour;
     private int userId;
 
 
         // Constructor (optional)
 
-        public Space(int spaceId, String name, String description, int capacity, boolean availability, float pricePerHour, int userId) {
+        public Space(int spaceId, String name, String description, int capacity, boolean availability, float pricePerJour, int userId) {
             this.spaceId = spaceId;
             this.name = name;
             this.description = description;
             this.capacity = capacity;
             this.availability = availability;
-            this.pricePerHour = pricePerHour;
+            this.pricePerJour = pricePerJour;
             this.userId = userId;
         }
     
@@ -61,7 +61,7 @@ public class Space {
     }
 
 
-    public boolean isAvailability() {
+    public boolean getAvailability() {
         return availability;
     }
 
@@ -69,12 +69,12 @@ public class Space {
         this.availability = availability;
     }
 
-    public float getPricePerHour() {
-        return pricePerHour;
+    public float getPricePerJour() {
+        return pricePerJour;
     }
 
-    public void setPricePerHour(float pricePerHour) {
-        this.pricePerHour = pricePerHour;
+    public void setPricePerJour(float pricePerJour) {
+        this.pricePerJour = pricePerJour;
     }
 
     public int getUserId() {

@@ -84,10 +84,10 @@ public class Validation {
         }
     }
 
-    public static float getValidPricePerHour() {
+    public static float getValidPricePerJour() {
         Scanner scanner = new Scanner(System.in);
         while (true) {
-            System.out.print("Enter space price per hour: ");
+            System.out.print("Enter space price per Jour: ");
             if (scanner.hasNextFloat()) {
                 float price = scanner.nextFloat();
                 scanner.nextLine(); // Consume the newline
@@ -95,7 +95,7 @@ public class Validation {
                     return price;
                 }
             }
-            System.out.println("Price per hour must be a positive number. Please try again.");
+            System.out.println("Price per Jour must be a positive number. Please try again.");
             scanner.nextLine(); // Clear invalid input
         }
     }
