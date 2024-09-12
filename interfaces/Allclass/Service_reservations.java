@@ -12,6 +12,7 @@ public class Service_reservations {
         this.reservation_id = reservation_id;
         this.total_price = total_price;
     }
+   
 
     public int getService_reservation_id() {
         return service_reservation_id;

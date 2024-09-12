@@ -94,6 +94,18 @@ import interfaces.Allclass.Payments;
         }
     }
 
+    public void updatePaymentPrice(int reservation_id, double amount) {
+        String query = "UPDATE payments SET amount = ? WHERE reservation_id = ?";
+        try (Connection conn = db.connect();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setDouble(1, amount);
+            stmt.setInt(2, reservation_id);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void deletePayment(int paymentId) {
         String query = "DELETE FROM payments WHERE payment_id = ?";

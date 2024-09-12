@@ -1,5 +1,7 @@
 package interfaces.Allclass;
 
+import java.time.LocalDateTime;
+
 public class Space {
     private int spaceId;
     private String name;
@@ -8,6 +10,8 @@ public class Space {
     private boolean availability;
     private float pricePerJour;
     private int userId;
+    private LocalDateTime createdAt;
+
 
 
         // Constructor (optional)
@@ -21,6 +25,17 @@ public class Space {
             this.pricePerJour = pricePerJour;
             this.userId = userId;
         }
+
+           public Space(int spaceId, String name, String description, int capacity, boolean availability, float pricePerJour, int userId, LocalDateTime createdAt) {
+        this.spaceId = spaceId;
+        this.name = name;
+        this.description = description;
+        this.capacity = capacity;
+        this.availability = availability;
+        this.pricePerJour = pricePerJour;
+        this.userId = userId;
+        this.createdAt = createdAt;
+    }
     
         public Space() {
             // Default constructor

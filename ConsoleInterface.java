@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import email.Gmail;
 
 import DB_Conn.DB;
 import interfaces.Allclass.*;
@@ -21,6 +23,8 @@ public class ConsoleInterface {
     private ReservationsDAO reservationsDAO;
     private PaymentsDAO paymentsDAO;
     private SubscriptionsDAO subscriptionsDAO;
+    private ServiceReservationsDAO serviceReservationsDAO;
+    private FavoriteSpaceDAO favoriteSpaceDAO;
 
     public ConsoleInterface() {
         this.scanner = new Scanner(System.in);
@@ -33,6 +37,8 @@ public class ConsoleInterface {
         this.reservationsDAO = new ReservationsDAO(db);
         this.paymentsDAO = new PaymentsDAO(db);
         this.subscriptionsDAO = new SubscriptionsDAO(db);
+        this.serviceReservationsDAO = new ServiceReservationsDAO(db);
+        this.favoriteSpaceDAO = new FavoriteSpaceDAO(db);
 
     }
 
@@ -41,8 +47,9 @@ public class ConsoleInterface {
         while (running) {
             System.out.println("Welcome to WorkPal");
             System.out.println("1. Login");
-            System.out.println("2. Register as a New Member");
-            System.out.println("3. Exit");
+            System.out.println("2. forgot password");
+            System.out.println("3. Register as a New Member");
+            System.out.println("4. Exit");
             System.out.print("Please choose an option: ");
             int choice = Integer.parseInt(scanner.nextLine());
             switch (choice) {
@@ -50,9 +57,12 @@ public class ConsoleInterface {
                     UserLogin();
                     break;
                 case 2:
-                    memberRegistration("membre");
+                    ForgotPassword();
                     break;
                 case 3:
+                    memberRegistration("membre");
+                    break;
+                case 4:
                     running = false;
                     break;
                 default:
@@ -86,6 +96,45 @@ public class ConsoleInterface {
         }
     }
 
+    private void ForgotPassword() {
+        try {
+            String email = Validation.getValidEmail();
+            Optional<User> user = userDAOImpl.getUserByEmail(email);
+
+            if (user.isPresent()) {
+                // Generate random numeric password
+                String randomPassword = generateRandomNumericPassword(10); // e.g., 10-digit password
+                user.get().setPassword(randomPassword); // Set the new password
+
+                // Save the updated password in the database
+                boolean updateSuccess = userDAOImpl.updateUserPassword(user.get());
+
+                if (updateSuccess) {
+                    // Send email with the new password
+                    Gmail.sendEmail(email, " Forgot Password ", " Hello, your new password is:  " + randomPassword);
+                    System.out
+                            .println("An email has been sent to your registered email address with the new password.");
+                } else {
+                    System.out.println("Failed to update the password in the database.");
+                }
+            } else {
+                System.out.println("No user found with the given email.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+
+    // Generate random numeric password
+    private String generateRandomNumericPassword(int length) {
+        StringBuilder password = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            int digit = (int) (Math.random() * 10); // Generates a random digit between 0 and 9
+            password.append(digit);
+        }
+        return password.toString();
+    }
+
     private void memberRegistration(String Role) {
 
         String name = Validation.getValidInput("name");
@@ -107,6 +156,22 @@ public class ConsoleInterface {
         }
     }
 
+    private void sendEmail(String subject, String message) {
+        try {
+            // Fetch user details by ID
+            HashMap<String, Object> userAuth = userDAOImpl.getUserById(IDAuth);
+            String email = (String) userAuth.get("email"); // Cast Object to String
+            String name = (String) userAuth.get("name");
+
+            // Use the Email class to send the email
+            Gmail.sendEmail(email, subject,
+                    "Hello " + name + message);
+        } catch (Exception e) {
+            // Print the error message if something goes wrong
+            System.out.println(e.getMessage());
+        }
+    }
+
     private void memberMenu() {
         boolean running = true;
         while (running) {
@@ -114,11 +179,14 @@ public class ConsoleInterface {
             System.out.println("1. View Profile");
             System.out.println("2. Update Profile");
             System.out.println("3. Reserve Space");
-            System.out.println("4. View Reservations");
-            System.out.println("5. Cancel Reservation");
-            System.out.println("6. Manage Subscriptions");
-            System.out.println("7. View Events");
-            System.out.println("8. Log Out");
+            System.out.println("4. All Space Reserved");
+            System.out.println("5. View Reservations");
+            System.out.println("6. Cancel Reservation");
+            System.out.println("7. Add services to My Space");
+            System.out.println("8. favorite space");
+            System.out.println("9. List favorite");
+            System.out.println("10. View Events");
+            System.out.println("11. Log Out");
             System.out.print("Please choose an option: ");
 
             String input = scanner.nextLine().trim();
@@ -147,18 +215,27 @@ public class ConsoleInterface {
                     reserveSpace();
                     break;
                 case 4:
-                    viewReservations();
+                    AllSpaceReserved();
                     break;
                 case 5:
-                    cancelReservation();
+                    viewReservations();
                     break;
                 case 6:
-
+                    cancelReservation();
                     break;
                 case 7:
-                    viewEvents();
+                    AddServicesToReservations();
                     break;
                 case 8:
+                    FavoriteSpace();
+                    break;
+                case 9:
+                    ListFavorite();
+                    break;
+                case 10:
+                    viewEvents();
+                    break;
+                case 11:
                     running = false;
                     System.out.println("Logging out...");
                     break;
@@ -297,6 +374,8 @@ public class ConsoleInterface {
 
             if (updateSuccessful) {
                 System.out.println("Profile updated successfully.");
+                sendEmail(" Profile updated successfully.", "Profile updated");
+
             } else {
                 System.out.println("Failed to update profile.");
             }
@@ -306,31 +385,86 @@ public class ConsoleInterface {
     }
 
     private void reserveSpace() {
-        try {
-            // Display all available spaces with associated services
-            spaceDAO.displayAllSpacesWithServices();
 
-            System.out.println("Enter Space ID to reserve:");
+        System.out.println("1 - Display all spaces available");
+        System.out.println("2 - Search for available spaces");
+        System.out.print("Enter your choice: ");
+        int choice1 = Integer.parseInt(scanner.nextLine());
+
+        try {
+            if (choice1 == 1) {
+                // Display all spaces with services
+                spaceDAO.displayAllSpacesWithServices();
+            } else if (choice1 == 2) {
+                // Get search criteria from the user
+                System.out.print("Enter space name (or leave empty for no search): ");
+                String name = scanner.nextLine();
+                name = name.isEmpty() ? null : name;
+
+                System.out.print("Enter minimum capacity (or leave empty for no search): ");
+                String capacityInput = scanner.nextLine();
+                Integer capacity = capacityInput.isEmpty() ? null : Integer.parseInt(capacityInput);
+
+                System.out.print("Enter maximum price per day (or leave empty for no search): ");
+                String priceInput = scanner.nextLine();
+                Double pricePerJour = priceInput.isEmpty() ? null : Double.parseDouble(priceInput);
+
+                // Perform the search
+                List<Space> spaces = spaceDAO.searchSpaces(name, capacity, pricePerJour);
+
+                // Display results
+                if (spaces.isEmpty()) {
+                    System.out.println("No spaces found matching the criteria.");
+                } else {
+                    System.out.println("Found " + spaces.size() + " spaces:");
+                    for (Space space : spaces) {
+                        System.out.println("Space ID: " + space.getSpaceId() +
+                                ", Name: " + space.getName() +
+                                ", Description: " + space.getDescription() +
+                                ", Capacity: " + space.getCapacity() +
+                                ", Availability: " + space.getAvailability() +
+                                ", Price per day: " + space.getPricePerJour() +
+                                ", User ID: " + space.getUserId());
+                    }
+                }
+            } else {
+                System.out.println("Invalid choice. Please try again.");
+                return;
+            }
+
+            // Get Space ID to reserve
+            System.out.print("Enter Space ID to reserve: ");
             int spaceId = Integer.parseInt(scanner.nextLine());
 
             boolean running = true;
             while (running) {
                 // Provide options for the user to choose the reservation method
                 System.out.println("\nChoose a method to reserve:");
-                System.out.println("1. Reserve Space");
-                System.out.println("2. Reserve Space with Abonnement");
+                System.out.println("1 - Reserve Space");
+                System.out.println("2 - Reserve Space with Abonnement");
+                System.out.print("Enter your choice: ");
 
                 int choice = Integer.parseInt(scanner.nextLine());
 
                 switch (choice) {
                     case 1:
                         // Reserve space without abonnement
-                        reserveSpaceWithoutAbonnement(spaceId);
-
+                        try {
+                            reserveSpaceWithoutAbonnement(spaceId);
+                        } catch (Exception e) {
+                            System.out.println("Failed to reserve space: " + e.getMessage());
+                            e.printStackTrace(); // Log the exception for debugging
+                        }
                         break;
 
                     case 2:
-                        reserveSpaceWithAbonnement(spaceId);
+                        // Reserve space with abonnement
+                        try {
+                            reserveSpaceWithAbonnement(spaceId);
+                        } catch (Exception e) {
+                            System.out.println("Failed to reserve space with abonnement: " + e.getMessage());
+                            e.printStackTrace(); // Log the exception for debugging
+                        }
                         break;
 
                     default:
@@ -339,9 +473,68 @@ public class ConsoleInterface {
                 }
             }
         } catch (Exception e) {
-            System.out.println("Failed to reserve space: " + e.getMessage());
+            System.out.println("An error occurred: " + e.getMessage());
             e.printStackTrace(); // Log the exception for debugging
         }
+    }
+
+    private void AllSpaceReserved() {
+
+        try {
+            List<Reservation> reservations = reservationsDAO.getAllReservationsByMembre(IDAuth);
+
+            if (reservations.isEmpty()) {
+                System.out.println("No reservations found.");
+                return;
+            }
+
+            // Print table header (including Space and Service details)
+            System.out.printf("%-15s %-20s %-30s %-20s %-15s %-15s %-30s\n",
+                    "Reservation ID", "Space Name", "Space Description", "Start Time", "Count Jour", "Status",
+                    "Services");
+            System.out.println(
+                    "-------------------------------------------------------------------------------------------------------------------------------------------");
+
+            // Print table rows
+            for (Reservation reservation : reservations) {
+                // Fetch the space details using spaceId
+                Space space = spaceDAO.findSpaceById(reservation.getSpaceId());
+
+                if (space != null) {
+                    // Fetch services associated with the space
+                    List<Service> spaceServices = serviceDAO.getServicesBySpaceId(space.getSpaceId());
+
+                    // Fetch services associated with the reservation
+                    List<Service> reservationServices = serviceDAO
+                            .getServicesByReservationId(reservation.getReservationId());
+
+                    // Combine both space services and reservation services
+                    List<Service> allServices = new ArrayList<>();
+                    allServices.addAll(spaceServices);
+                    allServices.addAll(reservationServices);
+
+                    // Collect service names to display
+                    String serviceNames = allServices.stream()
+                            .map(Service::getName)
+                            .collect(Collectors.joining(", "));
+
+                    // Print reservation, space, and service details
+                    System.out.printf("%-15d %-20s %-30s %-20s %-15s %-15s %-30s\n",
+                            reservation.getReservationId(),
+                            space.getName(), // Space name
+                            space.getDescription(), // Space description
+                            reservation.getStartTime().toString(), // Start time
+                            reservation.getCountJour() != null ? reservation.getCountJour().toString() : "N/A", // Count
+                                                                                                                // Jour
+                            reservation.getStatus(), // Status
+                            serviceNames.isEmpty() ? "No services" : serviceNames); // List of services
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+
     }
 
     public void reserveSpaceWithoutAbonnement(int spaceId) throws Exception {
@@ -404,6 +597,9 @@ public class ConsoleInterface {
                 paymentsDAO.addPayment(pay);
 
                 System.out.println("You have reserved the space for " + days + " days.");
+
+                sendEmail(" You have reserved the space for " + days + " days.", "Reservation successful");
+
             } else {
                 System.out.println("Reservation cancelled.");
             }
@@ -418,38 +614,39 @@ public class ConsoleInterface {
 
     private void reserveSpaceWithAbonnement(int spaceId) {
         Space space = spaceDAO.findSpaceById(spaceId);
-    
+
         if (space == null) {
             System.out.println("Space not found.");
             memberMenu();
             return;
         }
-    
+
         try {
             System.out.println("ID: " + space.getUserId());
             List<Abonnement> abonnements = abonnementsDAO.getAllAbonnements(space.getUserId());
-    
+
             // Print table header (User ID removed)
             System.out.printf("%-15s %-15s %-20s %-15s %-15s\n",
                     "ID", "Name", "Description", "Count Jour", "Price");
             System.out.println(
                     "-------------------------------------------------------------------------------");
-    
+
             // Print table rows (User ID removed)
             for (Abonnement abonnement : abonnements) {
                 System.out.printf("%-15d %-15s %-20s %-15d %-15.2f\n",
                         abonnement.getAbonnementId(),
                         abonnement.getName(),
                         abonnement.getDescription(),
-                        abonnement.getCountJour(),   // int
-                        abonnement.getPrice());      // double
+                        abonnement.getCountJour(), // int
+                        abonnement.getPrice()); // double
             }
 
             System.out.println("\nChoose an abonnement to reserve:");
             int abonnementId = Integer.parseInt(scanner.nextLine());
             Abonnement selectedAbonnement = abonnementsDAO.getAbonnementById(abonnementId).orElse(null);
             System.out.println("Total price: " + selectedAbonnement.getPrice() + "DH");
-            System.out.println("Do you want to buy "+selectedAbonnement.getName()+" for " + selectedAbonnement.getPrice() + "DH? (true or false):");
+            System.out.println("Do you want to buy " + selectedAbonnement.getName() + " for "
+                    + selectedAbonnement.getPrice() + "DH? (true or false):");
 
             boolean userResponse;
             try {
@@ -463,9 +660,10 @@ public class ConsoleInterface {
             Timestamp startTime = Timestamp.valueOf(localDateTime);
 
             if (userResponse) {
-                Subscription subscription = new Subscription(IDAuth, abonnementId, spaceId, "active" , startTime);
+                Subscription subscription = new Subscription(IDAuth, abonnementId, spaceId, "active", startTime);
                 subscriptionsDAO.addSubscription(subscription);
-                Reservation reservation = new Reservation(IDAuth, spaceId, startTime, selectedAbonnement.getCountJour(), "active");
+                Reservation reservation = new Reservation(IDAuth, spaceId, startTime, selectedAbonnement.getCountJour(),
+                        "active");
                 reservationsDAO.addReservation(reservation);
                 int reservationId = reservation.getReservationId();
                 space.setAvailability(false);
@@ -474,59 +672,114 @@ public class ConsoleInterface {
                 paymentsDAO.addPayment(pay);
 
                 System.out.println("You have reserved the space for " + selectedAbonnement.getCountJour() + " days.");
+                sendEmail(" Reservation successful",
+                        " You have reserved the space for " + selectedAbonnement.getCountJour() + " days.");
 
-                
                 memberMenu();
             } else {
                 System.out.println("Reservation cancelled.");
             }
-            
+
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
-    
-    
+
     private void viewReservations() {
         try {
             List<Reservation> reservations = reservationsDAO.getAllReservationsByMembre(IDAuth);
-    
+
             if (reservations.isEmpty()) {
                 System.out.println("No reservations found.");
                 return;
             }
-    
+
             // Print table header
             System.out.printf("%-15s  %-15s %-25s %-15s %-15s\n",
-                    "Reservation ID",  "Space ID", "Start Time", "Count Jour", "Status");
+                    "Reservation ID", "Space ID", "Start Time", "Count Jour", "Status");
             System.out.println(
                     "-----------------------------------------------------------------------------------------------");
-    
+
             // Print table rows
             for (Reservation reservation : reservations) {
                 System.out.printf("%-15d  %-15d %-25s %-15s %-15s\n",
                         reservation.getReservationId(),
-                        
+
                         reservation.getSpaceId(),
-                        reservation.getStartTime().toString(),   // Format timestamp as a string
-                        reservation.getCountJour() != null ? reservation.getCountJour().toString() : "N/A", // Handle null values
-                        reservation.getStatus()
-                        );  // Format timestamp as a string
+                        reservation.getStartTime().toString(), // Format timestamp as a string
+                        reservation.getCountJour() != null ? reservation.getCountJour().toString() : "N/A", // Handle
+                                                                                                            // null
+                                                                                                            // values
+                        reservation.getStatus()); // Format timestamp as a string
             }
-    
+
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
     }
-    
 
     private void cancelReservation() {
-        // Implementation for canceling a reservation
+        viewReservations();
+        System.out.print("Enter the reservation ID to cancel: ");
+        int reservationId = Integer.parseInt(scanner.nextLine());
+
+        try {
+            // Fetch reservation details
+            Reservation reservation = reservationsDAO.getReservationById(reservationId).orElse(null);
+
+            if (reservation == null) {
+                System.out.println("Reservation not found.");
+                return;
+            }
+
+            // Update reservation status to cancelled
+            reservation.setStatus("cancelled");
+            reservationsDAO.updateReservation(reservation);
+
+            // Fetch space associated with the reservation
+            Space space = spaceDAO.findSpaceById(reservation.getSpaceId());
+
+            if (space != null) {
+                // Update space availability to true
+                space.setAvailability(true);
+                spaceDAO.updateSpace(space); // Assuming you have an updateSpace method
+            }
+
+            System.out.println("Reservation has been successfully cancelled.");
+
+            // Send confirmation email to user
+            HashMap<String, Object> userAuth = userDAOImpl.getUserById(IDAuth);
+            sendEmail("Reservation Cancelled", " Your reservation has been successfully cancelled.");
+
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
     }
 
-    // private void manageSubscriptions() {
-    // // Implementation for managing subscriptions
-    // }
+    private void FavoriteSpace() {
+        try {
+            spaceDAO.displayAllSpacesWithServices();
+            System.out.print("Enter space ID to add to favorite: ");
+            int spaceId = Integer.parseInt(scanner.nextLine());
+
+            FavoriteSpace favoriteSpace = new FavoriteSpace(IDAuth, spaceId, LocalDateTime.now());
+
+            favoriteSpaceDAO.addFavoriteSpace(favoriteSpace);
+            System.out.println("Space added to favorites successfully!");
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    private void ListFavorite(){
+       try {
+         favoriteSpaceDAO.displayFavoritesWithSpaces(IDAuth);
+       } catch (Exception e) {
+        // TODO: handle exception
+       }
+            
+    }
 
     private void viewEvents() {
         // Implementation for viewing events
@@ -695,6 +948,52 @@ public class ConsoleInterface {
                     service.getName(),
                     service.getDescription(),
                     service.getPrice());
+        }
+    }
+
+    private void AddServicesToReservations() {
+        AllSpaceReserved();
+        System.out.print("Enter the ID of the Reservation to which you want to add a service: ");
+        int reservationID = scanner.nextInt();
+        scanner.nextLine();
+
+        boolean addingServices = true;
+        double totalPrice = 0.0; // Initialize total price
+
+        while (addingServices) {
+            listAllServices();
+            System.out.print("Enter the ID of the service you want to add (or type 0 to finish): ");
+            int serviceId = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
+
+            if (serviceId == 0) {
+                addingServices = false;
+                System.out.println("Finished adding services.");
+                System.out.println("Total price for all services added: " + totalPrice + " MAD");
+            } else {
+                try {
+                    // Add service to space
+                    serviceDAO.addServiceToSpace(reservationID, serviceId);
+
+                    // Retrieve service details and accumulate the price
+                    List<Service> services = serviceDAO.getServicesBySpaceId(reservationID);
+                    for (Service service : services) {
+                        totalPrice += service.getPrice();
+                    }
+                    LocalDateTime localDateTime = LocalDateTime.now();
+                    Timestamp startTime = Timestamp.valueOf(localDateTime);
+                    ServiceReservation serviceReservation = new ServiceReservation(serviceId, reservationID, totalPrice,
+                            startTime);
+                    serviceReservationsDAO.addServiceReservation(serviceReservation);
+                    List<Payments> payment = paymentsDAO.getPaymentsByReservationId(reservationID);
+                    System.out.println("Service added to reservation successfully. Current total price: " + totalPrice);
+                    double currentAmount = payment.get(0).getAmount();
+
+                    paymentsDAO.updatePaymentPrice(reservationID, totalPrice + currentAmount);
+                } catch (SQLException e) {
+                    System.out.println("Error adding service to reservation: " + e.getMessage());
+                }
+            }
         }
     }
 

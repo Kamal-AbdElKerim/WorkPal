@@ -1,5 +1,7 @@
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import DB_Conn.DB;
@@ -36,7 +38,6 @@ public class ServiceDAO implements ServicesInterface {
         } catch (SQLException e) {
             throw new RuntimeException("Error fetching services", e);
         }
-        System.out.println(servicesMap);
         return servicesMap;
     }
 
@@ -53,6 +54,54 @@ public class ServiceDAO implements ServicesInterface {
             throw new SQLException("Failed to add service to space: " + e.getMessage());
         }
     }
+    public List<Service> getServicesBySpaceId(int spaceId) throws SQLException {
+        String sql = "SELECT s.service_id, s.name, s.description, s.price " +
+                     "FROM services s " +
+                     "JOIN service_spaces ss ON s.service_id = ss.service_id " +
+                     "WHERE ss.spaces_id = ?";
+        
+        try (PreparedStatement stmt = db.connect().prepareStatement(sql)) {
+            stmt.setInt(1, spaceId); // Set the spaceId parameter
+            ResultSet rs = stmt.executeQuery();
+            
+            List<Service> services = new ArrayList<>();
+            while (rs.next()) {
+                services.add(mapRowToService(rs));
+            }
+            return services;
+        }
+    }
+    
+
+    public List<Service> getServicesByReservationId(int reservationId) throws SQLException {
+        String sql = "SELECT s.service_id, s.name, s.description, s.price " +
+                     "FROM services s " +
+                     "JOIN service_reservations sr ON s.service_id = sr.service_id " +
+                     "WHERE sr.reservation_id = ?";
+    
+        try (PreparedStatement stmt = db.connect().prepareStatement(sql)) {
+            stmt.setInt(1, reservationId);
+            ResultSet rs = stmt.executeQuery();
+    
+            List<Service> services = new ArrayList<>();
+            while (rs.next()) {
+                services.add(mapRowToService(rs));
+            }
+            return services;
+        }
+    }
+    
+
+    private Service mapRowToService(ResultSet rs) throws SQLException {
+        int serviceId = rs.getInt("service_id");
+        String name = rs.getString("name");
+        String description = rs.getString("description");
+        double price = rs.getDouble("price"); // Use double for price
+        
+        return new Service(serviceId, name, description, price);
+    }
+    
+
 
 
 }

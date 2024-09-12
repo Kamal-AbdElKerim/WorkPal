@@ -265,4 +265,48 @@ public class SpaceDAO implements Spaces {
         }
     }
 
+
+    public List<Space> searchSpaces(String name, Integer capacity, Double pricePerJour) {
+        String sql = "SELECT * FROM spaces WHERE " +
+                     "(name ILIKE ? OR ? IS NULL) " +
+                     "AND (capacity = ? OR ? IS NULL) " +
+                     "AND (price_per_jour = ? OR ? IS NULL)";
+        
+        List<Space> spaces = new ArrayList<>();
+        
+        try (Connection conn = db.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            // Set parameters with type information
+            stmt.setString(1, name != null ? "%" + name + "%" : null); // Search for name (optional)
+            stmt.setString(2, name); // To check if name is null
+            stmt.setObject(3, capacity, java.sql.Types.INTEGER); // Search for capacity (optional)
+            stmt.setObject(4, capacity, java.sql.Types.INTEGER); // To check if capacity is null
+            stmt.setObject(5, pricePerJour, java.sql.Types.DOUBLE); // Search for price_per_jour (optional)
+            stmt.setObject(6, pricePerJour, java.sql.Types.DOUBLE); // To check if price_per_jour is null
+            
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                // Map the result set to Space objects
+                Space space = new Space(
+                    rs.getInt("space_id"),
+                    rs.getString("name"),
+                    rs.getString("description"),
+                    rs.getInt("capacity"),
+                    rs.getBoolean("availability"),
+                    rs.getFloat("price_per_jour"),
+                    rs.getInt("user_id"),
+                    rs.getTimestamp("created_at").toLocalDateTime()
+                );
+                spaces.add(space);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return spaces;
+    }
+    
+
 }

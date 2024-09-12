@@ -188,6 +188,23 @@ public class UserDAOImpl implements UserDAO {
         }
     }
 
+    public boolean updateUserPassword(User user) {
+        String sql = "UPDATE users SET password = ? WHERE email = ?";
+        
+        try (Connection conn = db.connect(); 
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, user.getPassword()); // Set new password
+            stmt.setString(2, user.getEmail());    // Use the user's email to find the record
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0; // Return true if update was successful
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+
     // private User mapResultSetToUser(ResultSet rs) throws SQLException {
     //     return new User(
     //             rs.getInt("id"),
