@@ -3,6 +3,7 @@ import java.util.HashMap;
 
 import DB_Conn.DB;
 import interfaces.SubscriptionsInterface;
+import interfaces.Allclass.Abonnement;
 import interfaces.Allclass.Subscription;
 
 public class SubscriptionsDAO implements SubscriptionsInterface {
@@ -84,21 +85,49 @@ public class SubscriptionsDAO implements SubscriptionsInterface {
     
 
     @Override
-    public HashMap<Integer, Subscription> getSubscriptionsByUserId(int userId) throws SQLException {
-        HashMap<Integer, Subscription> subscriptions = new HashMap<>();
-        String sql = "SELECT * FROM subscriptions WHERE user_id = ?";
+    public void displaySubscriptions(int userId) throws SQLException {
+        String sql = "SELECT s.subscription_id, s.user_id, s.space_id, s.status, a.name, a.description, a.count_jour, a.price " +
+                     "FROM subscriptions s " +
+                     "JOIN abonnements a ON s.abonnement_id = a.abonnement_id " +
+                     "WHERE s.user_id = ?";
+    
         try (Connection connection = db.connect();
              PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setInt(1, userId);
+    
             try (ResultSet rs = stmt.executeQuery()) {
+                // Check if there are any results
+                if (!rs.isBeforeFirst()) {
+                    System.out.println("No subscriptions found.");
+                    return;
+                }
+    
+                // Print table header
+                System.out.printf("%-15s  %-25s %-25s %-10s %-10s\n",
+                        "Subscription ID",  "Name", "Description", "Price", "Count Jour");
+                System.out.println(
+                        "----------------------------------------------------------------------------------------------------------");
+    
+                // Print each row directly
                 while (rs.next()) {
-                    Subscription subscription = mapRowToSubscription(rs);
-                    subscriptions.put(subscription.getSubscriptionId(), subscription);
+                    int subscriptionId = rs.getInt("subscription_id");
+                    String name = rs.getString("name");
+                    String description = rs.getString("description");
+                    double price = rs.getDouble("price");
+                    int countJour = rs.getInt("count_jour");
+    
+                    // Display the data in a formatted table
+                    System.out.printf("%-15d  %-25s %-25s %-10.2f %-10d\n",
+                            subscriptionId, name, description, price, countJour);
                 }
             }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving subscriptions: " + e.getMessage());
+            e.printStackTrace();
         }
-        return subscriptions;
     }
+    
+    
     
     @Override
     public HashMap<Integer, Subscription> getSubscriptionsBySpaceId(int spaceId) throws SQLException {
@@ -128,4 +157,7 @@ public class SubscriptionsDAO implements SubscriptionsInterface {
             rs.getTimestamp("created_at")
         );
     }
+
+  
+
 }

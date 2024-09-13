@@ -8,6 +8,6 @@ public interface SubscriptionsInterface {
     void deleteSubscription(int subscriptionId) throws Exception;
     Subscription getSubscriptionById(int subscriptionId) throws Exception;
     HashMap<Integer, Subscription> getAllSubscriptions() throws Exception;
-    HashMap<Integer, Subscription> getSubscriptionsByUserId(int userId) throws Exception;
+    void displaySubscriptions(int userId) throws Exception;
     HashMap<Integer, Subscription> getSubscriptionsBySpaceId(int spaceId) throws Exception;
 }

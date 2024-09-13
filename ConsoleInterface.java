@@ -2,7 +2,11 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import email.Gmail;
@@ -43,6 +47,18 @@ public class ConsoleInterface {
     }
 
     public void start() {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        Runnable task = () -> {
+            try {
+                reservationsDAO.updateExpiredReservations();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        };
+
+        
+        scheduler.scheduleAtFixedRate(task, 0, 1, TimeUnit.DAYS);
+
         boolean running = true;
         while (running) {
             System.out.println("Welcome to WorkPal");
@@ -186,7 +202,8 @@ public class ConsoleInterface {
             System.out.println("8. favorite space");
             System.out.println("9. List favorite");
             System.out.println("10. View Events");
-            System.out.println("11. Log Out");
+            System.out.println("11. My Abonnements");
+            System.out.println("12. Log Out");
             System.out.print("Please choose an option: ");
 
             String input = scanner.nextLine().trim();
@@ -236,6 +253,9 @@ public class ConsoleInterface {
                     viewEvents();
                     break;
                 case 11:
+                    MyAbonnements();
+                    break;
+                case 12:
                     running = false;
                     System.out.println("Logging out...");
                     break;
@@ -294,10 +314,10 @@ public class ConsoleInterface {
                     manageSpaces();
                     break;
                 case 2:
-                    viewReservations();
+                    ViewReservationsManager();
                     break;
                 case 3:
-                    manageMembers();
+                    manageMembre();
                     break;
                 case 4:
                     manageSubscriptions();
@@ -687,35 +707,38 @@ public class ConsoleInterface {
 
     private void viewReservations() {
         try {
-            List<Reservation> reservations = reservationsDAO.getAllReservationsByMembre(IDAuth);
+            List<ReservationPaymentDTO> reservations = reservationsDAO.getAllReservationsWithPaymentsByMembre(IDAuth);
 
             if (reservations.isEmpty()) {
-                System.out.println("No reservations found.");
+                System.out.println("No reservations with payments found.");
                 return;
             }
 
             // Print table header
-            System.out.printf("%-15s  %-15s %-25s %-15s %-15s\n",
-                    "Reservation ID", "Space ID", "Start Time", "Count Jour", "Status");
+            System.out.printf("%-15s %-15s %-15s %-25s %-10s %-15s %-10s %-15s %-15s\n",
+                    "Reservation ID", "Space ID", "Start Time", "Count Jour", "Status", "Payment Amount", "Method",
+                    "Payment Date", "Payment Status");
             System.out.println(
-                    "-----------------------------------------------------------------------------------------------");
+                    "----------------------------------------------------------------------------------------------------------");
 
-            // Print table rows
-            for (Reservation reservation : reservations) {
-                System.out.printf("%-15d  %-15d %-25s %-15s %-15s\n",
-                        reservation.getReservationId(),
-
-                        reservation.getSpaceId(),
-                        reservation.getStartTime().toString(), // Format timestamp as a string
-                        reservation.getCountJour() != null ? reservation.getCountJour().toString() : "N/A", // Handle
-                                                                                                            // null
-                                                                                                            // values
-                        reservation.getStatus()); // Format timestamp as a string
+            // Print each row
+            for (ReservationPaymentDTO dto : reservations) {
+                System.out.printf("%-15d %-15d %-25s %-10d %-15s %-10.2f %-10s %-15s %-15s\n",
+                        dto.getReservationId(),
+                        dto.getSpaceId(),
+                        dto.getStartTime(),
+                        dto.getCountJour(),
+                        dto.getReservationStatus(),
+                        dto.getAmount() != null ? dto.getAmount() : 0.0,
+                        dto.getPaymentMethod() != null ? dto.getPaymentMethod() : "N/A",
+                        dto.getPaymentDate() != null ? dto.getPaymentDate() : "N/A",
+                        dto.getPaymentStatus() != null ? dto.getPaymentStatus() : "N/A");
             }
-
-        } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+        } catch (SQLException e) {
+            System.err.println("Error retrieving reservations and payments: " + e.getMessage());
+            e.printStackTrace();
         }
+
     }
 
     private void cancelReservation() {
@@ -772,17 +795,27 @@ public class ConsoleInterface {
         }
     }
 
-    private void ListFavorite(){
-       try {
-         favoriteSpaceDAO.displayFavoritesWithSpaces(IDAuth);
-       } catch (Exception e) {
-        // TODO: handle exception
-       }
-            
+    private void ListFavorite() {
+        try {
+            favoriteSpaceDAO.displayFavoritesWithSpaces(IDAuth);
+        } catch (Exception e) {
+            // TODO: handle exception
+        }
+
     }
 
     private void viewEvents() {
         // Implementation for viewing events
+    }
+
+    private void MyAbonnements() {
+        try {
+            subscriptionsDAO.displaySubscriptions(IDAuth);
+
+        } catch (SQLException e) {
+            System.err.println("Error retrieving abonnements: " + e.getMessage());
+            e.printStackTrace(); // Log the stack trace for debugging
+        }
     }
 
     private void manageSpaces() {
@@ -821,6 +854,98 @@ public class ConsoleInterface {
                 default:
                     System.out.println("Invalid choice. Please try again.");
             }
+        }
+    }
+
+    private void ViewReservationsManager() {
+        System.out.println("1. View all reservations");
+        System.out.println("2. Cancel a reservation");
+        System.out.println("3. Modify a reservation");
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // Consume the newline character
+
+        switch (choice) {
+            case 1:
+                try {
+                    reservationsDAO.displayAllReservations(IDAuth);
+                } catch (Exception e) {
+                    e.printStackTrace(); // Log the error for better debugging
+                }
+                break;
+            case 2:
+                cancelReservationByManager();
+                break;
+            case 3:
+                modifyReservation();
+                break;
+            default:
+                System.out.println("Invalid option. Please choose again.");
+        }
+    }
+
+    private void cancelReservationByManager() {
+
+        try {
+            reservationsDAO.displayAllReservations(IDAuth);
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the error for better debugging
+        }
+        System.out.print("Enter the reservation ID to cancel: ");
+        int reservationId = Integer.parseInt(scanner.nextLine());
+
+        try {
+            // Fetch reservation details
+            Reservation reservation = reservationsDAO.getReservationById(reservationId).orElse(null);
+
+            if (reservation == null) {
+                System.out.println("Reservation not found.");
+                return;
+            }
+
+            // Update reservation status to cancelled
+            reservation.setStatus("cancelled");
+            reservationsDAO.updateReservation(reservation);
+
+            // Fetch space associated with the reservation
+            Space space = spaceDAO.findSpaceById(reservation.getSpaceId());
+
+            if (space != null) {
+                // Update space availability to true
+                space.setAvailability(true);
+                spaceDAO.updateSpace(space); // Assuming you have an updateSpace method
+            }
+
+            System.out.println("Reservation has been successfully cancelled.");
+
+            // Send confirmation email to user
+            HashMap<String, Object> userAuth = userDAOImpl.getUserById(IDAuth);
+            sendEmail("Reservation Cancelled", " Your reservation has been successfully cancelled.");
+
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+
+    }
+
+    private void modifyReservation() {
+        try {
+            reservationsDAO.displayAllReservations(IDAuth);
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the error for better debugging
+        }
+        System.out.print("Enter Reservation ID to modify: ");
+        int reservationIdToModify = scanner.nextInt();
+        scanner.nextLine(); // Consume the newline character
+
+        System.out.print("Enter new duration (days): ");
+        int newCountJour = scanner.nextInt();
+        scanner.nextLine(); // Consume the newline character
+
+        try {
+            reservationsDAO.modifyReservation(reservationIdToModify, newCountJour);
+            System.out.println("Reservation modified successfully.");
+        } catch (SQLException e) {
+            System.out.println("Error modifying reservation: " + e.getMessage());
         }
     }
 
@@ -1267,6 +1392,7 @@ public class ConsoleInterface {
                 case 4:
                     deleteuser("membre");
                     break;
+            
                 case 5:
                     running = false; // Exit the loop
                     break;
@@ -1275,6 +1401,11 @@ public class ConsoleInterface {
             }
         }
     }
+
+
+    
+  
+    
 
     private void updateuser(String Role) {
         allUsersByRole(Role); // This method should display all users
