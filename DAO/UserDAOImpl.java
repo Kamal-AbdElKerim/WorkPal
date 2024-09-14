@@ -1,8 +1,9 @@
+package DAO;
 
 
 import DB_Conn.DB;
-import interfaces.Allclass.User;
 import interfaces.UserDAO;
+import model.User;
 
 import java.sql.*;
 import java.util.HashMap;

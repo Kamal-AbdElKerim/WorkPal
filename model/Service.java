@@ -1,4 +1,4 @@
-package interfaces.Allclass;
+package model;
 
 public class Service {
     private int serviceId;

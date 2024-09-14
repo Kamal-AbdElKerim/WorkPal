@@ -1,4 +1,4 @@
-package interfaces.Allclass;
+package model;
 
 import java.time.LocalDateTime;
 

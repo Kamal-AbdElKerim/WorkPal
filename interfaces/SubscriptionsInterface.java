@@ -1,7 +1,7 @@
 package interfaces;
 import java.util.HashMap;
 
-import interfaces.Allclass.Subscription;
+import model.Subscription;
 public interface SubscriptionsInterface {
     void addSubscription(Subscription subscription) throws Exception;
     void updateSubscription(Subscription subscription) throws Exception;

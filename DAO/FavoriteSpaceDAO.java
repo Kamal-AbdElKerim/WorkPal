@@ -1,3 +1,4 @@
+package DAO;
 
 
 
@@ -7,7 +8,7 @@ import java.util.List;
 
 import DB_Conn.DB;
 import interfaces.FavoriteSpaceInterface;
-import interfaces.Allclass.FavoriteSpace;
+import model.FavoriteSpace;
 
 public class FavoriteSpaceDAO implements FavoriteSpaceInterface {
      private DB db;

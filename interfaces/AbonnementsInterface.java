@@ -2,7 +2,8 @@ package interfaces;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
-import interfaces.Allclass.Abonnement;
+
+import model.Abonnement;
 
 public interface AbonnementsInterface {
     void addAbonnement(Abonnement abonnement) throws SQLException;

@@ -1,12 +1,12 @@
+package DAO;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import DB_Conn.DB;
-
-import interfaces.Allclass.Abonnement;
 import interfaces.AbonnementsInterface;
+import model.Abonnement;
 
 public class AbonnementsDAO implements AbonnementsInterface {
     private DB db;

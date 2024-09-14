@@ -1,10 +1,11 @@
+package DAO;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 import DB_Conn.DB;
 import interfaces.ServiceReservationsInterface;
-import interfaces.Allclass.ServiceReservation;
+import model.ServiceReservation;
 
 public class ServiceReservationsDAO implements ServiceReservationsInterface {
     private final DB db; // Assuming a DB class to handle connection

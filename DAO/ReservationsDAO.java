@@ -1,3 +1,4 @@
+package DAO;
 
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -6,8 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import DB_Conn.DB;
 import interfaces.ReservationInterface;
-import interfaces.Allclass.Reservation;
-import interfaces.Allclass.ReservationPaymentDTO;
+import model.Reservation;
+import model.ReservationPaymentDTO;
 
 public class ReservationsDAO implements ReservationInterface {
 

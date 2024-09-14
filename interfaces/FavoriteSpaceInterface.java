@@ -1,6 +1,7 @@
 package interfaces;
-import interfaces.Allclass.FavoriteSpace;
 import java.util.List;
+
+import model.FavoriteSpace;
 
 public interface FavoriteSpaceInterface {
     void addFavoriteSpace(FavoriteSpace favoriteSpace);

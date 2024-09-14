@@ -1,6 +1,7 @@
+package DAO;
 import DB_Conn.DB;
-import interfaces.Allclass.Space;
 import interfaces.Spaces;
+import model.Space;
 
 import java.sql.*;
 import java.util.ArrayList;

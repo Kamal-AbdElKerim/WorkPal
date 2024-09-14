@@ -1,10 +1,12 @@
+package DAO;
 import java.sql.*;
 import java.util.HashMap;
 
 import DB_Conn.DB;
 import interfaces.SubscriptionsInterface;
-import interfaces.Allclass.Abonnement;
-import interfaces.Allclass.Subscription;
+import model.Abonnement;
+import model.Subscription;
+
 
 public class SubscriptionsDAO implements SubscriptionsInterface {
        private DB db;

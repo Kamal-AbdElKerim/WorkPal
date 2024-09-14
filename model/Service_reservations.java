@@ -1,4 +1,4 @@
-package interfaces.Allclass;
+package model;
 public class Service_reservations {
 
     private int service_reservation_id ;

@@ -3,7 +3,8 @@ package interfaces;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
-import interfaces.Allclass.Reservation;
+
+import model.Reservation;
 
 public interface ReservationInterface {
     

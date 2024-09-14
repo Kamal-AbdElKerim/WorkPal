@@ -1,3 +1,4 @@
+package DAO;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -7,7 +8,7 @@ import java.util.List;
 
 import DB_Conn.DB;
 import interfaces.PaymentsInterface;
-import interfaces.Allclass.Payments;
+import model.Payments;
 
     public class PaymentsDAO implements PaymentsInterface {
     private DB db;

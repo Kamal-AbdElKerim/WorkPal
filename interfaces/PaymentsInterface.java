@@ -1,10 +1,10 @@
 package interfaces;
 
 
-import interfaces.Allclass.Payments;
-
 import java.sql.SQLException;
 import java.util.List;
+
+import model.Payments;
 
 public interface PaymentsInterface {
     void addPayment(Payments payment) throws SQLException;

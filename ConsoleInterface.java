@@ -1,18 +1,25 @@
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import email.Gmail;
-
+import model.*;
 import DB_Conn.DB;
-import interfaces.Allclass.*;
+import DAO.AbonnementsDAO;
+import DAO.FavoriteSpaceDAO;
+import DAO.FeedbackDAO;
+import DAO.PaymentsDAO;
+import DAO.Raport;
+import DAO.ReservationsDAO;
+import DAO.ServiceDAO;
+import DAO.ServiceReservationsDAO;
+import DAO.SpaceDAO;
+import DAO.SubscriptionsDAO;
+import DAO.UserDAOImpl;
 import Validation.Validation;
 
 public class ConsoleInterface {
@@ -29,6 +36,8 @@ public class ConsoleInterface {
     private SubscriptionsDAO subscriptionsDAO;
     private ServiceReservationsDAO serviceReservationsDAO;
     private FavoriteSpaceDAO favoriteSpaceDAO;
+    private Raport raport;
+    private FeedbackDAO feedbackDAO;
 
     public ConsoleInterface() {
         this.scanner = new Scanner(System.in);
@@ -43,6 +52,8 @@ public class ConsoleInterface {
         this.subscriptionsDAO = new SubscriptionsDAO(db);
         this.serviceReservationsDAO = new ServiceReservationsDAO(db);
         this.favoriteSpaceDAO = new FavoriteSpaceDAO(db);
+        this.raport = new Raport();
+        this.feedbackDAO = new FeedbackDAO(db);
 
     }
 
@@ -56,7 +67,6 @@ public class ConsoleInterface {
             }
         };
 
-        
         scheduler.scheduleAtFixedRate(task, 0, 1, TimeUnit.DAYS);
 
         boolean running = true;
@@ -174,9 +184,9 @@ public class ConsoleInterface {
 
     private void sendEmail(String subject, String message) {
         try {
-            // Fetch user details by ID
+
             HashMap<String, Object> userAuth = userDAOImpl.getUserById(IDAuth);
-            String email = (String) userAuth.get("email"); // Cast Object to String
+            String email = (String) userAuth.get("email");
             String name = (String) userAuth.get("name");
 
             // Use the Email class to send the email
@@ -203,7 +213,8 @@ public class ConsoleInterface {
             System.out.println("9. List favorite");
             System.out.println("10. View Events");
             System.out.println("11. My Abonnements");
-            System.out.println("12. Log Out");
+            System.out.println("12. Rating Space");
+            System.out.println("13. Log Out");
             System.out.print("Please choose an option: ");
 
             String input = scanner.nextLine().trim();
@@ -250,12 +261,15 @@ public class ConsoleInterface {
                     ListFavorite();
                     break;
                 case 10:
-                    viewEvents();
+                    // viewEvents();
                     break;
                 case 11:
                     MyAbonnements();
                     break;
                 case 12:
+                    RatingSpace();
+                    break;
+                case 13:
                     running = false;
                     System.out.println("Logging out...");
                     break;
@@ -271,8 +285,7 @@ public class ConsoleInterface {
             System.out.println("\nAdministrator Menu");
             System.out.println("1. Manage Users");
             System.out.println("2. Configure Application");
-            System.out.println("3. Manage Access Roles");
-            System.out.println("4. Log Out");
+            System.out.println("3. Log Out");
             System.out.print("Please choose an option: ");
 
             int choice = Integer.parseInt(scanner.nextLine());
@@ -281,10 +294,10 @@ public class ConsoleInterface {
                     manageUsers();
                     break;
                 case 2:
-                    configureApplication();
+                    // configureApplication();
                     break;
                 case 3:
-                    manageAccessRoles();
+                    // manageAccessRoles();
                     break;
                 case 4:
                     running = false;
@@ -304,8 +317,7 @@ public class ConsoleInterface {
             System.out.println("3. Manage Members");
             System.out.println("4. Manage Subscriptions");
             System.out.println("5. View Reports");
-            System.out.println("6. Manage Payments");
-            System.out.println("7. Log Out");
+            System.out.println("6. Log Out");
             System.out.print("Please choose an option: ");
 
             int choice = Integer.parseInt(scanner.nextLine());
@@ -326,9 +338,6 @@ public class ConsoleInterface {
                     viewReports();
                     break;
                 case 6:
-                    managePayments();
-                    break;
-                case 7:
                     running = false;
                     break;
                 default:
@@ -355,7 +364,6 @@ public class ConsoleInterface {
     }
 
     private void updateProfile(int IDAuth) {
-        // Display current profile
         viewProfile();
 
         // Retrieve current user data
@@ -415,6 +423,11 @@ public class ConsoleInterface {
             if (choice1 == 1) {
                 // Display all spaces with services
                 spaceDAO.displayAllSpacesWithServices();
+                System.out.print("Enter space ID to view feedback: ");
+                int spaceId = scanner.nextInt();
+
+                feedbackDAO.displayFeedbackForSpace(spaceId);
+                return;
             } else if (choice1 == 2) {
                 // Get search criteria from the user
                 System.out.print("Enter space name (or leave empty for no search): ");
@@ -508,7 +521,6 @@ public class ConsoleInterface {
                 return;
             }
 
-            // Print table header (including Space and Service details)
             System.out.printf("%-15s %-20s %-30s %-20s %-15s %-15s %-30s\n",
                     "Reservation ID", "Space Name", "Space Description", "Start Time", "Count Jour", "Status",
                     "Services");
@@ -620,6 +632,11 @@ public class ConsoleInterface {
 
                 sendEmail(" You have reserved the space for " + days + " days.", "Reservation successful");
 
+                HashMap<String, Object> userManager = userDAOImpl.getUserById(space.getUserId());
+                String email = (String) userManager.get("email");
+                String name = (String) userManager.get("name");
+                Gmail.sendEmail(email, "Reservation", "Hello " + name + ", Reservation successful");
+
             } else {
                 System.out.println("Reservation cancelled.");
             }
@@ -645,7 +662,6 @@ public class ConsoleInterface {
             System.out.println("ID: " + space.getUserId());
             List<Abonnement> abonnements = abonnementsDAO.getAllAbonnements(space.getUserId());
 
-            // Print table header (User ID removed)
             System.out.printf("%-15s %-15s %-20s %-15s %-15s\n",
                     "ID", "Name", "Description", "Count Jour", "Price");
             System.out.println(
@@ -695,6 +711,11 @@ public class ConsoleInterface {
                 sendEmail(" Reservation successful",
                         " You have reserved the space for " + selectedAbonnement.getCountJour() + " days.");
 
+                HashMap<String, Object> userManager = userDAOImpl.getUserById(space.getUserId());
+                String email = (String) userManager.get("email");
+                String name = (String) userManager.get("name");
+                Gmail.sendEmail(email, "Reservation", "Hello " + name + ", Reservation successful");
+
                 memberMenu();
             } else {
                 System.out.println("Reservation cancelled.");
@@ -714,7 +735,6 @@ public class ConsoleInterface {
                 return;
             }
 
-            // Print table header
             System.out.printf("%-15s %-15s %-15s %-25s %-10s %-15s %-10s %-15s %-15s\n",
                     "Reservation ID", "Space ID", "Start Time", "Count Jour", "Status", "Payment Amount", "Method",
                     "Payment Date", "Payment Status");
@@ -774,6 +794,11 @@ public class ConsoleInterface {
             HashMap<String, Object> userAuth = userDAOImpl.getUserById(IDAuth);
             sendEmail("Reservation Cancelled", " Your reservation has been successfully cancelled.");
 
+            HashMap<String, Object> userManager = userDAOImpl.getUserById(space.getUserId());
+            String email = (String) userManager.get("email");
+            String name = (String) userManager.get("name");
+            Gmail.sendEmail(email, "Reservation", "Hello " + name + ", Reservation successful");
+
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
@@ -804,10 +829,6 @@ public class ConsoleInterface {
 
     }
 
-    private void viewEvents() {
-        // Implementation for viewing events
-    }
-
     private void MyAbonnements() {
         try {
             subscriptionsDAO.displaySubscriptions(IDAuth);
@@ -816,6 +837,27 @@ public class ConsoleInterface {
             System.err.println("Error retrieving abonnements: " + e.getMessage());
             e.printStackTrace(); // Log the stack trace for debugging
         }
+    }
+
+    private void RatingSpace() {
+        try {
+            viewReservations();
+            System.out.print("Enter space ID to rate: ");
+            int spaceId = Integer.parseInt(scanner.nextLine());
+
+            System.out.print("Enter your rating (1-5): ");
+            int rating = scanner.nextInt();
+
+            scanner.nextLine(); // Consume newline
+            System.out.print("Enter your comment: ");
+            String comment = scanner.nextLine();
+
+            feedbackDAO.addFeedback(IDAuth, spaceId, rating, comment);
+            System.out.println("Feedback submitted successfully.");
+        } catch (Exception e) {
+            // TODO: handle exception
+        }
+
     }
 
     private void manageSpaces() {
@@ -888,7 +930,7 @@ public class ConsoleInterface {
         try {
             reservationsDAO.displayAllReservations(IDAuth);
         } catch (Exception e) {
-            e.printStackTrace(); // Log the error for better debugging
+            e.printStackTrace();
         }
         System.out.print("Enter the reservation ID to cancel: ");
         int reservationId = Integer.parseInt(scanner.nextLine());
@@ -912,7 +954,7 @@ public class ConsoleInterface {
             if (space != null) {
                 // Update space availability to true
                 space.setAvailability(true);
-                spaceDAO.updateSpace(space); // Assuming you have an updateSpace method
+                spaceDAO.updateSpace(space);
             }
 
             System.out.println("Reservation has been successfully cancelled.");
@@ -920,6 +962,11 @@ public class ConsoleInterface {
             // Send confirmation email to user
             HashMap<String, Object> userAuth = userDAOImpl.getUserById(IDAuth);
             sendEmail("Reservation Cancelled", " Your reservation has been successfully cancelled.");
+
+            HashMap<String, Object> userManager = userDAOImpl.getUserById(space.getUserId());
+            String email = (String) userManager.get("email");
+            String name = (String) userManager.get("name");
+            Gmail.sendEmail(email, "Reservation", "Hello " + name + ", Reservation successful");
 
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
@@ -931,15 +978,15 @@ public class ConsoleInterface {
         try {
             reservationsDAO.displayAllReservations(IDAuth);
         } catch (Exception e) {
-            e.printStackTrace(); // Log the error for better debugging
+            e.printStackTrace();
         }
         System.out.print("Enter Reservation ID to modify: ");
         int reservationIdToModify = scanner.nextInt();
-        scanner.nextLine(); // Consume the newline character
+        scanner.nextLine();
 
         System.out.print("Enter new duration (days): ");
         int newCountJour = scanner.nextInt();
-        scanner.nextLine(); // Consume the newline character
+        scanner.nextLine();
 
         try {
             reservationsDAO.modifyReservation(reservationIdToModify, newCountJour);
@@ -1151,10 +1198,6 @@ public class ConsoleInterface {
         }
     }
 
-    private void manageMembers() {
-        // Implementation for managing members (add, update, delete)
-    }
-
     private void manageSubscriptions() {
         boolean running = true;
         while (running) {
@@ -1299,19 +1342,18 @@ public class ConsoleInterface {
     }
 
     private void viewReports() {
-        // Implementation for viewing reports and statistics
-    }
+        try {
+            System.out.println("\n");
+            raport.generateReservationsReport();
+            System.out.println("\n");
+            raport.generateSpaceUsageReport();
+            System.out.println("\n");
+            raport.generateRevenueBySpaceReport();
+            System.out.println("\n");
 
-    private void managePayments() {
-        // Implementation for managing payments and invoices
-    }
-
-    private void configureApplication() {
-        // Implementation for configuring application settings
-    }
-
-    private void manageAccessRoles() {
-        // Implementation for managing user roles and permissions
+        } catch (Exception e) {
+            // TODO: handle exception
+        }
     }
 
     private void manageUsers() {
@@ -1365,7 +1407,6 @@ public class ConsoleInterface {
         }
     }
 
-    // Method to manage members
     private void manageMembre() {
 
         boolean running = true;
@@ -1392,7 +1433,7 @@ public class ConsoleInterface {
                 case 4:
                     deleteuser("membre");
                     break;
-            
+
                 case 5:
                     running = false; // Exit the loop
                     break;
@@ -1401,11 +1442,6 @@ public class ConsoleInterface {
             }
         }
     }
-
-
-    
-  
-    
 
     private void updateuser(String Role) {
         allUsersByRole(Role); // This method should display all users

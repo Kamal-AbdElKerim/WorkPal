@@ -1,8 +1,8 @@
 package interfaces;
 
-import interfaces.Allclass.Space;
-
 import java.util.List;
+
+import model.Space;
 
 public interface Spaces {
 

@@ -1,3 +1,4 @@
+package DAO;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -5,8 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import DB_Conn.DB;
-import interfaces.Allclass.Service;
 import interfaces.ServicesInterface;
+import model.Service;
 
 public class ServiceDAO implements ServicesInterface {
     private DB db;

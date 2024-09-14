@@ -1,9 +1,9 @@
 package interfaces;
 
-import interfaces.Allclass.User;
-
 import java.util.HashMap;
 import java.util.Optional;
+
+import model.User;
 
 
 public interface UserDAO {
